@@ -1,0 +1,8 @@
+username,password,firstname,lastname,email,course1,role1
+manager1,Password123!,Manager,One,manager1@example.com,,
+teacher1,Password123!,Teacher,One,teacher1@example.com,course1,editingteacher
+student1,Password123!,Student,One,student1@example.com,course1,student
+student2,Password123!,Student,Two,student2@example.com,course1,student
+student3,Password123!,Student,Three,student3@example.com,course1,student
+student4,Password123!,Student,Four,student4@example.com,course1,student
+student5,Password123!,Student,Five,student5@example.com,course1,student

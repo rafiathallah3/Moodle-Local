@@ -1,0 +1,2 @@
+view_mobile_message_reload_page_creation_time_meeting,mod_bigbluebuttonbn
+view_mobile_message_groups_not_supported,mod_bigbluebuttonbn

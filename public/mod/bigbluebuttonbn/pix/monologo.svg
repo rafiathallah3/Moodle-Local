@@ -1,0 +1,26 @@
+<svg xml:space="preserve" width="24" height="24"
+	xmlns:xlink="http://www.w3.org/1999/xlink"
+	xmlns="http://www.w3.org/2000/svg"
+	viewBox="-20 -20 310 310" preserveAspectRatio="xMinYMid meet">
+	<defs>
+		<linearGradient x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(117.89574 -168.37253 -168.37253 -117.89572 48.802 192.187)" spreadMethod="pad" id="a">
+			<stop style="stop-opacity:1;stop-color:#283174" offset="0"/>
+			<stop style="stop-opacity:1;stop-color:#283174" offset=".479"/>
+			<stop style="stop-opacity:1;stop-color:#283174" offset="1"/>
+		</linearGradient>
+		<linearGradient xlink:href="#a" id="d" gradientUnits="userSpaceOnUse" gradientTransform="matrix(147.36967 210.46566 -210.46566 147.36965 61.314 29.766)" spreadMethod="pad" x1="0" y1="0" x2="1" y2="0"/>
+		<clipPath clipPathUnits="userSpaceOnUse" id="b">
+			<path d="M0 216h216V0H0v216Z"/>
+		</clipPath>
+		<clipPath clipPathUnits="userSpaceOnUse" id="c">
+			<path d="M4.987 108C4.987 51.245 50.996 5.236 107.75 5.236c56.756 0 102.764 46.009 102.764 102.764 0 56.755-46.008 102.764-102.764 102.764C50.996 210.764 4.987 164.755 4.987 108"/>
+		</clipPath>
+	</defs>
+	<g style="display:inline">
+		<g clip-path="url(#c)" transform="matrix(1.25 0 0 -1.25 -.42 269.375)" style="fill-rule:nonzero">
+			<g style="fill-rule:nonzero">
+				<path style="fill:url(#d);fill-rule:nonzero;stroke:none;stroke-width:1.25;filter:url(#filter3786)" d="M135 6.545C64.058 6.545 6.545 64.056 6.545 135c0 70.944 57.513 128.455 128.455 128.455 70.945 0 128.455-57.511 128.455-128.455 0-70.944-57.51-128.455-128.455-128.455ZM72.47 56.8c8.32 0 15.421 4.069 21.307 12.205 5.885 8.136 8.828 17.93 8.828 29.38v75.64c0 6.026 3.013 9.038 9.04 9.038h46.709c6.026 0 9.04-3.012 9.04-9.039v-35.86c0-5.827-3.014-8.84-9.04-9.042h-9.04c-11.653-.405-21.498-3.445-29.53-9.129-8.038-5.679-12.055-12.68-12.055-21.006h50.625c10.848 0 20.085 3.819 27.724 11.451 7.631 7.638 11.451 16.875 11.451 27.725v35.861c0 10.848-3.82 20.09-11.45 27.723-7.64 7.636-16.877 11.451-27.725 11.451h-46.71c-10.847 0-20.09-3.815-27.722-11.451-7.638-7.634-11.451-16.875-11.451-27.723z" transform="matrix(.8 0 0 -.8 .923 215)"/>
+			</g>
+		</g>
+	</g>
+</svg>

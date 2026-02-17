@@ -1,0 +1,3 @@
+tagsdeleted,mod_data
+data:comment,mod_data
+data:managecomments,mod_data

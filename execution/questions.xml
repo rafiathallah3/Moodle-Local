@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- Question: 1 -->
+<question type="multichoice">
+  <name>
+    <text>Programming 101 - Variables</text>
+  </name>
+  <questiontext format="html">
+    <text><![CDATA[<p>Which of the following is a valid variable name in PHP?</p>]]></text>
+  </questiontext>
+  <answer fraction="100" format="html">
+    <text><![CDATA[<p>$myVariable</p>]]></text>
+    <feedback format="html">
+      <text><![CDATA[<p>Correct! PHP variables start with $.</p>]]></text>
+    </feedback>
+  </answer>
+  <answer fraction="0" format="html">
+    <text><![CDATA[<p>myVariable</p>]]></text>
+    <feedback format="html">
+      <text><![CDATA[<p>Incorrect. Standard variables need a $ prefix.</p>]]></text>
+    </feedback>
+  </answer>
+  <answer fraction="0" format="html">
+    <text><![CDATA[<p>123variable</p>]]></text>
+    <feedback format="html">
+      <text><![CDATA[<p>Incorrect. Variable names cannot start with a number.</p>]]></text>
+    </feedback>
+  </answer>
+</question>
+
+<!-- Question: 2 -->
+<question type="truefalse">
+  <name>
+    <text>Programming 101 - Loops</text>
+  </name>
+  <questiontext format="html">
+    <text><![CDATA[<p>A 'for' loop is used when you know in advance how many times the script should run.</p>]]></text>
+  </questiontext>
+  <answer fraction="100" format="html">
+    <text>true</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Correct!</p>]]></text>
+    </feedback>
+  </answer>
+  <answer fraction="0" format="html">
+    <text>false</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Incorrect.</p>]]></text>
+    </feedback>
+  </answer>
+</question>
+
+<!-- Question: 2 -->
+<question type="truefalse">
+  <name>
+    <text>Programming 101 - Functions</text>
+  </name>
+  <questiontext format="html">
+    <text><![CDATA[<p>A function can return more than one value at the same time in all programming languages.</p>]]></text>
+  </questiontext>
+  <answer fraction="0" format="html">
+    <text>true</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Incorrect. Not all programming languages support returning multiple values directly.</p>]]></text>
+    </feedback>
+  </answer>
+  <answer fraction="100" format="html">
+    <text>false</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Correct! Some languages require workarounds like objects or arrays.</p>]]></text>
+    </feedback>
+  </answer>
+</question>
+
+<!-- Question: 3 -->
+<question type="truefalse">
+  <name>
+    <text>Programming 101 - Conditional Statements</text>
+  </name>
+  <questiontext format="html">
+    <text><![CDATA[<p>An 'if' statement allows a program to execute certain code only when a specific condition is met.</p>]]></text>
+  </questiontext>
+  <answer fraction="100" format="html">
+    <text>true</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Correct! Conditional statements control decision-making in programs.</p>]]></text>
+    </feedback>
+  </answer>
+  <answer fraction="0" format="html">
+    <text>false</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Incorrect. That is exactly the purpose of an 'if' statement.</p>]]></text>
+    </feedback>
+  </answer>
+</question>
+
+<!-- Question: 4 -->
+<question type="truefalse">
+  <name>
+    <text>Programming 101 - Arrays</text>
+  </name>
+  <questiontext format="html">
+    <text><![CDATA[<p>An array can store multiple values under a single variable name.</p>]]></text>
+  </questiontext>
+  <answer fraction="100" format="html">
+    <text>true</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Correct! Arrays allow multiple values to be stored in an indexed structure.</p>]]></text>
+    </feedback>
+  </answer>
+  <answer fraction="0" format="html">
+    <text>false</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Incorrect. Arrays are specifically designed to store multiple values.</p>]]></text>
+    </feedback>
+  </answer>
+</question>
+
+<!-- Question: 5 -->
+<question type="truefalse">
+  <name>
+    <text>Programming 101 - Compilation</text>
+  </name>
+  <questiontext format="html">
+    <text><![CDATA[<p>A compiled programming language translates the entire source code into machine code before execution.</p>]]></text>
+  </questiontext>
+  <answer fraction="100" format="html">
+    <text>true</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Correct! Compiled languages convert the full program before running it.</p>]]></text>
+    </feedback>
+  </answer>
+  <answer fraction="0" format="html">
+    <text>false</text>
+    <feedback format="html">
+      <text><![CDATA[<p>Incorrect. That describes how compiled languages work.</p>]]></text>
+    </feedback>
+  </answer>
+</question>
+
+
+</quiz>

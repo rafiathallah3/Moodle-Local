@@ -1,0 +1,10 @@
+/******  List View CSS ******/
+
+#proposals-list .card-header a.d-block {
+    color: black;
+    font-weight: bold;
+}
+
+#proposals-list .card {
+    overflow: visible;
+}

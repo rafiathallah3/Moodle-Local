@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.mustache": "plaintext"
+    },
+    "[mustache]": {
+        "editor.formatOnSave": false
+    },
+    "emmet.includeLanguages": {
+        "mustache": "html"
+    }
+}
