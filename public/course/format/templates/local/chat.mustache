@@ -1,0 +1,116 @@
+<div class="floating-chat-container">
+    <button id="chat-btn-{{uniqid}}" class="chat-btn-floating" aria-label="Open chat">
+        <i class="fa fa-comments"></i>
+    </button>
+    <div id="chat-view-{{uniqid}}" class="chat-view-custom">
+        <div class="chat-header-custom">
+            <span>Section Chat</span>
+            <button id="chat-close-{{uniqid}}" class="chat-close-custom" aria-label="Close chat">&times;</button>
+        </div>
+        <div class="chat-content-custom">
+            <p style="padding: 20px; color: #888; text-align: center;">Welcome to the section chat!</p>
+        </div>
+    </div>
+</div>
+
+<style>
+#chat-view-{{uniqid}} {
+    position: fixed;
+    bottom: 0;
+    right: 30px;
+    width: 350px;
+    max-width: 90vw;
+    height: 450px;
+    background: #fff;
+    border-radius: 15px 15px 0 0;
+    box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
+    z-index: 1050;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#chat-view-{{uniqid}}.show {
+    transform: translateY(0);
+}
+
+.chat-btn-floating {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s ease;
+    z-index: 1049;
+}
+
+.chat-btn-floating:hover {
+    transform: scale(1.1);
+    background: #0056b3;
+}
+
+.chat-header-custom {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    font-weight: 600;
+}
+
+.chat-close-custom {
+    background: #e9ecef;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #495057;
+    transition: background 0.2s;
+}
+
+.chat-close-custom:hover {
+    background: #dee2e6;
+}
+
+.chat-content-custom {
+    flex: 1;
+    overflow-y: auto;
+}
+</style>
+
+{{#js}}
+require(['jquery'], function($) {
+    var btn = $('#chat-btn-{{uniqid}}');
+    var view = $('#chat-view-{{uniqid}}');
+    var close = $('#chat-close-{{uniqid}}');
+
+    btn.on('click', function() {
+        // Close other chat views if any (to avoid overlap if multiple sections)
+    console.log("WHAT")
+        $('.chat-view-custom').removeClass('show');
+        view.addClass('show');
+    });
+
+    close.on('click', function() {
+        view.removeClass('show');
+    });
+});
+{{/js}}
