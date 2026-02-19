@@ -8,7 +8,15 @@
             <button id="chat-close-{{uniqid}}" class="chat-close-custom" aria-label="Close chat">&times;</button>
         </div>
         <div class="chat-content-custom">
-            <p style="padding: 20px; color: #888; text-align: center;">Welcome to the section chat!</p>
+            <div id="chat-messages-{{uniqid}}" class="chat-messages">
+                <div class="message system">Welcome to the section chat! I'm powered by Gemini AI. How can I help you?</div>
+            </div>
+            <div class="chat-input-area">
+                <textarea id="chat-input-{{uniqid}}" class="chat-input" placeholder="Ask me anything..."></textarea>
+                <button id="chat-send-{{uniqid}}" class="chat-send-btn" aria-label="Send message">
+                    <i class="fa fa-paper-plane"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -20,7 +28,7 @@
     right: 30px;
     width: 350px;
     max-width: 90vw;
-    height: 450px;
+    height: 500px;
     background: #fff;
     border-radius: 15px 15px 0 0;
     box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
@@ -92,25 +100,186 @@
 
 .chat-content-custom {
     flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
     overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message {
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.message.system {
+    align-self: center;
+    background: #f1f3f5;
+    color: #6c757d;
+    font-size: 13px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+.message.user {
+    align-self: flex-end;
+    background: #007bff;
+    color: white;
+    border-bottom-right-radius: 2px;
+}
+
+.message.ai {
+    align-self: flex-start;
+    background: #e9ecef;
+    color: #343a40;
+    border-bottom-left-radius: 2px;
+}
+
+.message.error {
+    align-self: center;
+    background: #ffe3e3;
+    color: #e03131;
+    border: 1px solid #fcc2c3;
+}
+
+.chat-input-area {
+    padding: 15px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+    background: #fff;
+    align-items: flex-end;
+}
+
+.chat-input {
+    flex: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    padding: 10px 15px;
+    resize: none;
+    height: 44px;
+    max-height: 100px;
+    outline: none;
+    font-family: inherit;
+    line-height: 20px;
+}
+
+.chat-input:focus {
+    border-color: #007bff;
+}
+
+.chat-send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    font-size: 16px;
+}
+
+.chat-send-btn:hover {
+    background: #0056b3;
+}
+
+.chat-send-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
 }
 </style>
 
 {{#js}}
-require(['jquery'], function($) {
+require(['jquery', 'core/config'], function($, Config) {
     var btn = $('#chat-btn-{{uniqid}}');
     var view = $('#chat-view-{{uniqid}}');
     var close = $('#chat-close-{{uniqid}}');
 
     btn.on('click', function() {
-        // Close other chat views if any (to avoid overlap if multiple sections)
-    console.log("WHAT")
         $('.chat-view-custom').removeClass('show');
         view.addClass('show');
     });
 
     close.on('click', function() {
         view.removeClass('show');
+    });
+
+    // AI Chat Logic
+    var messages = $('#chat-messages-{{uniqid}}');
+    var input = $('#chat-input-{{uniqid}}');
+    var sendBtn = $('#chat-send-{{uniqid}}');
+
+    function appendMessage(text, type) {
+        var msgDiv = $('<div class="message ' + type + '"></div>').text(text);
+        messages.append(msgDiv);
+        messages.animate({ scrollTop: messages[0].scrollHeight }, 200);
+    }
+
+    function sendMessage() {
+        var text = input.val().trim();
+        if (!text) return;
+
+        appendMessage(text, 'user');
+        input.val('');
+        
+        input.prop('disabled', true);
+        sendBtn.prop('disabled', true);
+        
+        var loadingId = 'loading-' + Date.now();
+        messages.append('<div id="' + loadingId + '" class="message system">Thinking...</div>');
+        messages.animate({ scrollTop: messages[0].scrollHeight }, 200);
+
+        $.ajax({
+            url: Config.wwwroot + '/local/chat_ai_ajax.php',
+            method: 'POST',
+            data: {
+                prompt: text,
+                sesskey: Config.sesskey
+            },
+            dataType: 'json',
+            success: function(response) {
+                $('#' + loadingId).remove();
+                if (response.success) {
+                    appendMessage(response.message, 'ai');
+                } else {
+                    appendMessage('Error: ' + response.message, 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#' + loadingId).remove();
+                console.error("AI Chat Error:", error);
+                appendMessage('Connection error. Please try again.', 'error');
+            },
+            complete: function() {
+                input.prop('disabled', false);
+                sendBtn.prop('disabled', false);
+                input.focus();
+            }
+        });
+    }
+
+    sendBtn.on('click', sendMessage);
+
+    input.on('keypress', function(e) {
+        if (e.which == 13 && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
     });
 });
 {{/js}}

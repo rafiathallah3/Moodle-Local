@@ -16,25 +16,25 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
-* Adds or updates modules in a course using new formslib
-*
-* @package    moodlecore
-* @copyright  1999 onwards Martin Dougiamas (http://dougiamas.com)
-* @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
-*/
+ * Adds or updates modules in a course using new formslib
+ *
+ * @package    moodlecore
+ * @copyright  1999 onwards Martin Dougiamas (http://dougiamas.com)
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 require_once("../config.php");
 require_once("lib.php");
-require_once($CFG->libdir.'/filelib.php');
-require_once($CFG->libdir.'/gradelib.php');
-require_once($CFG->libdir.'/completionlib.php');
-require_once($CFG->libdir.'/plagiarismlib.php');
+require_once($CFG->libdir . '/filelib.php');
+require_once($CFG->libdir . '/gradelib.php');
+require_once($CFG->libdir . '/completionlib.php');
+require_once($CFG->libdir . '/plagiarismlib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 
-$add    = optional_param('add', '', PARAM_ALPHANUM);     // Module name.
+$add = optional_param('add', '', PARAM_ALPHANUM);     // Module name.
 $update = optional_param('update', 0, PARAM_INT);
 $return = optional_param('return', 0, PARAM_BOOL);    //return to course/view.php if false or mod/modname/view.php if true
-$type   = optional_param('type', '', PARAM_ALPHANUM); //TODO: hopefully will be removed in 2.0
+$type = optional_param('type', '', PARAM_ALPHANUM); //TODO: hopefully will be removed in 2.0
 $sectionreturn = optional_param('sr', null, PARAM_INT);
 $beforemod = optional_param('beforemod', 0, PARAM_INT);
 $showonly = optional_param('showonly', '', PARAM_TAGLIST); // Settings group to show expanded and hide the rest.
@@ -56,7 +56,7 @@ if (!empty($showonly)) {
 }
 
 if (!empty($add)) {
-    $course  = required_param('course', PARAM_INT);
+    $course = required_param('course', PARAM_INT);
 
     $sectionid = optional_param('sectionid', null, PARAM_INT);
     if (empty($sectionid)) {
@@ -70,7 +70,7 @@ if (!empty($add)) {
     $url->param('course', $course);
     $PAGE->set_url($url);
 
-    $course = $DB->get_record('course', array('id'=>$course), '*', MUST_EXIST);
+    $course = $DB->get_record('course', array('id' => $course), '*', MUST_EXIST);
     require_login($course);
 
     // There is no page for this in the navigation. The closest we'll have is the course section.
@@ -100,13 +100,13 @@ if (!empty($add)) {
     $PAGE->set_url($url);
 
     // Select the "Edit settings" from navigation.
-    navigation_node::override_active_url(new moodle_url('/course/modedit.php', array('update'=>$update, 'return'=>1)));
+    navigation_node::override_active_url(new moodle_url('/course/modedit.php', array('update' => $update, 'return' => 1)));
 
     // Check the course module exists.
     $cm = get_coursemodule_from_id('', $update, 0, false, MUST_EXIST);
 
     // Check the course exists.
-    $course = $DB->get_record('course', array('id'=>$cm->course), '*', MUST_EXIST);
+    $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
 
     // require_login
     require_login($course, false, $cm); // needed to setup proper $COURSE
@@ -150,7 +150,7 @@ if (file_exists($modmoodleform)) {
     throw new \moodle_exception('noformdesc');
 }
 
-$mformclassname = 'mod_'.$module->name.'_mod_form';
+$mformclassname = 'mod_' . $module->name . '_mod_form';
 $mform = new $mformclassname($data, $cw->section, $cm, $course);
 $mform->set_data($data);
 if (!empty($showonly)) {

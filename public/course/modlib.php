@@ -32,7 +32,7 @@ use core\hook;
 use core_courseformat\formatactions;
 use core_grades\component_gradeitems;
 
-require_once($CFG->dirroot.'/course/lib.php');
+require_once($CFG->dirroot . '/course/lib.php');
 
 /**
  * Add course module.
@@ -46,7 +46,8 @@ require_once($CFG->dirroot.'/course/lib.php');
  * @param object $mform this is required by an existing hack to deal with files during MODULENAME_add_instance()
  * @return object the updated module info
  */
-function add_moduleinfo($moduleinfo, $course, $mform = null) {
+function add_moduleinfo($moduleinfo, $course, $mform = null)
+{
     global $DB, $CFG;
 
     // Attempt to include module library before we make any changes to DB.
@@ -61,14 +62,14 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
 
     // First add course_module record because we need the context.
     $newcm = new stdClass();
-    $newcm->course           = $course->id;
-    $newcm->module           = $moduleinfo->module;
-    $newcm->instance         = 0; // Not known yet, will be updated later (this is similar to restore code).
-    $newcm->visible          = $moduleinfo->visible;
-    $newcm->visibleold       = $moduleinfo->visible;
+    $newcm->course = $course->id;
+    $newcm->module = $moduleinfo->module;
+    $newcm->instance = 0; // Not known yet, will be updated later (this is similar to restore code).
+    $newcm->visible = $moduleinfo->visible;
+    $newcm->visibleold = $moduleinfo->visible;
     $newcm->visibleoncoursepage = $moduleinfo->visibleoncoursepage;
     if (isset($moduleinfo->cmidnumber)) {
-        $newcm->idnumber         = $moduleinfo->cmidnumber;
+        $newcm->idnumber = $moduleinfo->cmidnumber;
     }
     if (isset($moduleinfo->downloadcontent)) {
         $newcm->downloadcontent = $moduleinfo->downloadcontent;
@@ -78,21 +79,21 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
     } else {
         $newcm->lang = null;
     }
-    $newcm->groupmode        = $moduleinfo->groupmode;
-    $newcm->groupingid       = $moduleinfo->groupingid;
+    $newcm->groupmode = $moduleinfo->groupmode;
+    $newcm->groupingid = $moduleinfo->groupingid;
     $completion = new completion_info($course);
     if ($completion->is_enabled()) {
-        $newcm->completion                = $moduleinfo->completion;
-        $newcm->completionpassgrade       = $moduleinfo->completionpassgrade ?? 0;
+        $newcm->completion = $moduleinfo->completion;
+        $newcm->completionpassgrade = $moduleinfo->completionpassgrade ?? 0;
         if ($moduleinfo->completiongradeitemnumber === '') {
             $newcm->completiongradeitemnumber = null;
         } else {
             $newcm->completiongradeitemnumber = $moduleinfo->completiongradeitemnumber;
         }
-        $newcm->completionview            = $moduleinfo->completionview;
-        $newcm->completionexpected        = $moduleinfo->completionexpected;
+        $newcm->completionview = $moduleinfo->completionview;
+        $newcm->completionexpected = $moduleinfo->completionexpected;
     }
-    if(!empty($CFG->enableavailability)) {
+    if (!empty($CFG->enableavailability)) {
         // This code is used both when submitting the form, which uses a long
         // name to avoid clashes, and by unit test code which uses the real
         // name in the table.
@@ -142,15 +143,17 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
         throw new \moodle_exception('cannotaddcoursemodule');
     }
 
-    if (plugin_supports('mod', $moduleinfo->modulename, FEATURE_MOD_INTRO, true) &&
-            isset($moduleinfo->introeditor)) {
+    if (
+        plugin_supports('mod', $moduleinfo->modulename, FEATURE_MOD_INTRO, true) &&
+        isset($moduleinfo->introeditor)
+    ) {
         $introeditor = $moduleinfo->introeditor;
         unset($moduleinfo->introeditor);
-        $moduleinfo->intro       = $introeditor['text'];
+        $moduleinfo->intro = $introeditor['text'];
         $moduleinfo->introformat = $introeditor['format'];
     }
 
-    $addinstancefunction    = $moduleinfo->modulename."_add_instance";
+    $addinstancefunction = $moduleinfo->modulename . "_add_instance";
     try {
         $returnfromfunc = $addinstancefunction($moduleinfo, $mform);
     } catch (moodle_exception $e) {
@@ -160,21 +163,25 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
         // Undo everything we can. This is not necessary for databases which
         // support transactions, but improves consistency for other databases.
         context_helper::delete_instance(CONTEXT_MODULE, $moduleinfo->coursemodule);
-        $DB->delete_records('course_modules', array('id'=>$moduleinfo->coursemodule));
+        $DB->delete_records('course_modules', array('id' => $moduleinfo->coursemodule));
 
         if ($returnfromfunc instanceof moodle_exception) {
             throw $returnfromfunc;
         } else if (!is_number($returnfromfunc)) {
             throw new \moodle_exception('invalidfunction', '', course_get_url($course, $moduleinfo->section));
         } else {
-            throw new \moodle_exception('cannotaddnewmodule', '', course_get_url($course, $moduleinfo->section),
-                $moduleinfo->modulename);
+            throw new \moodle_exception(
+                'cannotaddnewmodule',
+                '',
+                course_get_url($course, $moduleinfo->section),
+                $moduleinfo->modulename
+            );
         }
     }
 
     $moduleinfo->instance = $returnfromfunc;
 
-    $DB->set_field('course_modules', 'instance', $returnfromfunc, array('id'=>$moduleinfo->coursemodule));
+    $DB->set_field('course_modules', 'instance', $returnfromfunc, array('id' => $moduleinfo->coursemodule));
 
     // Update embedded links and save files.
     $modcontext = context_module::instance($moduleinfo->coursemodule);
@@ -182,10 +189,16 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
         // This will respect a module that has set a value for intro in it's modname_add_instance() function.
         $introeditor['text'] = $moduleinfo->intro;
 
-        $moduleinfo->intro = file_save_draft_area_files($introeditor['itemid'], $modcontext->id,
-                                                      'mod_'.$moduleinfo->modulename, 'intro', 0,
-                                                      array('subdirs'=>true), $introeditor['text']);
-        $DB->set_field($moduleinfo->modulename, 'intro', $moduleinfo->intro, array('id'=>$moduleinfo->instance));
+        $moduleinfo->intro = file_save_draft_area_files(
+            $introeditor['itemid'],
+            $modcontext->id,
+            'mod_' . $moduleinfo->modulename,
+            'intro',
+            0,
+            array('subdirs' => true),
+            $introeditor['text']
+        );
+        $DB->set_field($moduleinfo->modulename, 'intro', $moduleinfo->intro, array('id' => $moduleinfo->instance));
     }
 
     // Add module tags.
@@ -225,7 +238,8 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
  *
  * @return stdClass moduleinfo updated by plugins.
  */
-function plugin_extend_coursemodule_edit_post_actions($moduleinfo, $course) {
+function plugin_extend_coursemodule_edit_post_actions($moduleinfo, $course)
+{
     $callbacks = get_plugins_with_function('coursemodule_edit_post_actions', 'lib.php');
     foreach ($callbacks as $type => $plugins) {
         foreach ($plugins as $plugin => $pluginfunction) {
@@ -245,9 +259,10 @@ function plugin_extend_coursemodule_edit_post_actions($moduleinfo, $course) {
  *
  * @return object moduleinfo update with grading management info
  */
-function edit_module_post_actions($moduleinfo, $course) {
+function edit_module_post_actions($moduleinfo, $course)
+{
     global $CFG, $USER;
-    require_once($CFG->libdir.'/gradelib.php');
+    require_once($CFG->libdir . '/gradelib.php');
 
     $modcontext = context_module::instance($moduleinfo->coursemodule);
     $hasgrades = plugin_supports('mod', $moduleinfo->modulename, FEATURE_GRADE_HAS_GRADE, false);
@@ -321,27 +336,27 @@ function edit_module_post_actions($moduleinfo, $course) {
         }
     }
 
-    require_once($CFG->libdir.'/grade/grade_outcome.php');
+    require_once($CFG->libdir . '/grade/grade_outcome.php');
     // Add outcomes if requested.
     if ($hasoutcomes && $outcomes = grade_outcome::fetch_all_available($course->id)) {
         // Outcome grade_item.itemnumber start at 1000, there is nothing above outcomes.
         $max_itemnumber = 999;
         if ($items) {
-            foreach($items as $item) {
+            foreach ($items as $item) {
                 if ($item->itemnumber > $max_itemnumber) {
                     $max_itemnumber = $item->itemnumber;
                 }
             }
         }
 
-        foreach($outcomes as $outcome) {
-            $elname = 'outcome_'.$outcome->id;
+        foreach ($outcomes as $outcome) {
+            $elname = 'outcome_' . $outcome->id;
 
             if (property_exists($moduleinfo, $elname) and $moduleinfo->$elname) {
                 // Check if this is a new outcome grade item.
                 $outcomeexists = false;
                 if ($items) {
-                    foreach($items as $item) {
+                    foreach ($items as $item) {
                         if ($item->outcomeid == $outcome->id) {
                             $outcomeexists = true;
                             break;
@@ -355,15 +370,15 @@ function edit_module_post_actions($moduleinfo, $course) {
                 $max_itemnumber++;
 
                 $outcomeitem = new grade_item();
-                $outcomeitem->courseid     = $course->id;
-                $outcomeitem->itemtype     = 'mod';
-                $outcomeitem->itemmodule   = $moduleinfo->modulename;
+                $outcomeitem->courseid = $course->id;
+                $outcomeitem->itemtype = 'mod';
+                $outcomeitem->itemmodule = $moduleinfo->modulename;
                 $outcomeitem->iteminstance = $moduleinfo->instance;
-                $outcomeitem->itemnumber   = $max_itemnumber;
-                $outcomeitem->itemname     = $outcome->fullname;
-                $outcomeitem->outcomeid    = $outcome->id;
-                $outcomeitem->gradetype    = GRADE_TYPE_SCALE;
-                $outcomeitem->scaleid      = $outcome->scaleid;
+                $outcomeitem->itemnumber = $max_itemnumber;
+                $outcomeitem->itemname = $outcome->fullname;
+                $outcomeitem->outcomeid = $outcome->id;
+                $outcomeitem->gradetype = GRADE_TYPE_SCALE;
+                $outcomeitem->scaleid = $outcome->scaleid;
                 $outcomeitem->insert();
 
                 if ($items) {
@@ -385,13 +400,15 @@ function edit_module_post_actions($moduleinfo, $course) {
         }
     }
 
-    if (plugin_supports('mod', $moduleinfo->modulename, FEATURE_ADVANCED_GRADING, false)
-            and has_capability('moodle/grade:managegradingforms', $modcontext)) {
-        require_once($CFG->dirroot.'/grade/grading/lib.php');
-        $gradingman = get_grading_manager($modcontext, 'mod_'.$moduleinfo->modulename);
+    if (
+        plugin_supports('mod', $moduleinfo->modulename, FEATURE_ADVANCED_GRADING, false)
+        and has_capability('moodle/grade:managegradingforms', $modcontext)
+    ) {
+        require_once($CFG->dirroot . '/grade/grading/lib.php');
+        $gradingman = get_grading_manager($modcontext, 'mod_' . $moduleinfo->modulename);
         $showgradingmanagement = false;
         foreach ($gradingman->get_available_areas() as $areaname => $aretitle) {
-            $formfield = 'advancedgradingmethod_'.$areaname;
+            $formfield = 'advancedgradingmethod_' . $areaname;
             if (isset($moduleinfo->{$formfield})) {
                 $gradingman->set_area($areaname);
                 $methodchanged = $gradingman->set_active_method($moduleinfo->{$formfield});
@@ -438,8 +455,13 @@ function edit_module_post_actions($moduleinfo, $course) {
         if ($course->visible && $moduleinfo->visible) {
             $adhocktask = new \core_course\task\content_notification_task();
             $adhocktask->set_custom_data(
-                ['update' => $moduleinfo->update, 'cmid' => $moduleinfo->coursemodule,
-                'courseid' => $course->id, 'userfrom' => $USER->id]);
+                [
+                    'update' => $moduleinfo->update,
+                    'cmid' => $moduleinfo->coursemodule,
+                    'courseid' => $course->id,
+                    'userfrom' => $USER->id
+                ]
+            );
             $adhocktask->set_component('course');
             \core\task\manager::queue_adhoc_task($adhocktask, true);
         }
@@ -459,18 +481,19 @@ function edit_module_post_actions($moduleinfo, $course) {
  * @param object $moduleinfo the current known data of the module
  * @return object the completed module info
  */
-function set_moduleinfo_defaults($moduleinfo) {
+function set_moduleinfo_defaults($moduleinfo)
+{
     global $PAGE;
 
     if (empty($moduleinfo->coursemodule)) {
         // Add.
         $cm = null;
-        $moduleinfo->instance     = '';
+        $moduleinfo->instance = '';
         $moduleinfo->coursemodule = '';
     } else {
         // Update.
         $cm = get_coursemodule_from_id('', $moduleinfo->coursemodule, 0, false, MUST_EXIST);
-        $moduleinfo->instance     = $cm->instance;
+        $moduleinfo->instance = $cm->instance;
         $moduleinfo->coursemodule = $cm->id;
     }
     // For safety.
@@ -495,10 +518,13 @@ function set_moduleinfo_defaults($moduleinfo) {
     }
 
     // Convert the 'use grade' checkbox into a grade-item number: 0 if checked, null if not.
-    if (isset($moduleinfo->completionusegrade) &&
+    if (
+        isset($moduleinfo->completionusegrade) &&
         $moduleinfo->completionusegrade &&
-        !isset($moduleinfo->completiongradeitemnumber
-        )) {
+        !isset(
+        $moduleinfo->completiongradeitemnumber
+    )
+    ) {
         $moduleinfo->completiongradeitemnumber = 0;
     } else if (!isset($moduleinfo->completiongradeitemnumber)) {
         // If there is no gradeitemnumber set, make sure to disable completionpassgrade.
@@ -571,7 +597,8 @@ function set_moduleinfo_defaults($moduleinfo) {
  * @return array list containing module, context, course section.
  * @throws moodle_exception if user is not allowed to perform the action or module is not allowed in this course
  */
-function can_add_moduleinfo($course, $modulename, $sectionnum) {
+function can_add_moduleinfo($course, $modulename, $sectionnum)
+{
     global $DB;
 
     $module = $DB->get_record('modules', ['name' => $modulename], '*', MUST_EXIST);
@@ -602,7 +629,8 @@ function can_add_moduleinfo($course, $modulename, $sectionnum) {
  * @return array - list of course module, context, module, moduleinfo, and course section.
  * @throws moodle_exception if user is not allowed to perform the action
  */
-function can_update_moduleinfo($cm) {
+function can_update_moduleinfo($cm)
+{
     global $DB;
 
     // Check the $USER has the right capability.
@@ -610,13 +638,13 @@ function can_update_moduleinfo($cm) {
     require_capability('moodle/course:manageactivities', $context);
 
     // Check module exists.
-    $module = $DB->get_record('modules', array('id'=>$cm->module), '*', MUST_EXIST);
+    $module = $DB->get_record('modules', array('id' => $cm->module), '*', MUST_EXIST);
 
     // Check the moduleinfo exists.
-    $data = $DB->get_record($module->name, array('id'=>$cm->instance), '*', MUST_EXIST);
+    $data = $DB->get_record($module->name, array('id' => $cm->instance), '*', MUST_EXIST);
 
     // Check the course section exists.
-    $cw = $DB->get_record('course_sections', array('id'=>$cm->section), '*', MUST_EXIST);
+    $cw = $DB->get_record('course_sections', array('id' => $cm->section), '*', MUST_EXIST);
 
     return array($cm, $context, $module, $data, $cw);
 }
@@ -633,7 +661,8 @@ function can_update_moduleinfo($cm) {
  * @param object $mform - the mform is required by some specific module in the function MODULE_update_instance(). This is due to a hack in this function.
  * @return array list of course module and module info.
  */
-function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
+function update_moduleinfo($cm, $moduleinfo, $course, $mform = null)
+{
     global $DB, $CFG;
 
     $data = new stdClass();
@@ -731,9 +760,15 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
 
     // Update embedded links and save files.
     if (plugin_supports('mod', $moduleinfo->modulename, FEATURE_MOD_INTRO, true)) {
-        $moduleinfo->intro = file_save_draft_area_files($moduleinfo->introeditor['itemid'], $modcontext->id,
-                                                      'mod_'.$moduleinfo->modulename, 'intro', 0,
-                                                      array('subdirs'=>true), $moduleinfo->introeditor['text']);
+        $moduleinfo->intro = file_save_draft_area_files(
+            $moduleinfo->introeditor['itemid'],
+            $modcontext->id,
+            'mod_' . $moduleinfo->modulename,
+            'intro',
+            0,
+            array('subdirs' => true),
+            $moduleinfo->introeditor['text']
+        );
         $moduleinfo->introformat = $moduleinfo->introeditor['format'];
         unset($moduleinfo->introeditor);
     }
@@ -742,14 +777,16 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
     $newgradeitem = null;
     if (!empty($data->grade_rescalegrades) && $data->grade_rescalegrades == 'yes') {
         // Fetch the grade item before it is updated.
-        $oldgradeitem = grade_item::fetch(array('itemtype' => 'mod',
-                                                'itemmodule' => $moduleinfo->modulename,
-                                                'iteminstance' => $moduleinfo->instance,
-                                                'itemnumber' => 0,
-                                                'courseid' => $moduleinfo->course));
+        $oldgradeitem = grade_item::fetch(array(
+            'itemtype' => 'mod',
+            'itemmodule' => $moduleinfo->modulename,
+            'iteminstance' => $moduleinfo->instance,
+            'itemnumber' => 0,
+            'courseid' => $moduleinfo->course
+        ));
     }
 
-    $updateinstancefunction = $moduleinfo->modulename."_update_instance";
+    $updateinstancefunction = $moduleinfo->modulename . "_update_instance";
     if (!$updateinstancefunction($moduleinfo, $mform)) {
         throw new \moodle_exception('cannotupdatemod', '', course_get_url($course, $cm->section), $moduleinfo->modulename);
     }
@@ -757,11 +794,13 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
     // This needs to happen AFTER the grademin/grademax have already been updated.
     if (!empty($data->grade_rescalegrades) && $data->grade_rescalegrades == 'yes') {
         // Get the grade_item after the update call the activity to scale the grades.
-        $newgradeitem = grade_item::fetch(array('itemtype' => 'mod',
-                                                'itemmodule' => $moduleinfo->modulename,
-                                                'iteminstance' => $moduleinfo->instance,
-                                                'itemnumber' => 0,
-                                                'courseid' => $moduleinfo->course));
+        $newgradeitem = grade_item::fetch(array(
+            'itemtype' => 'mod',
+            'itemmodule' => $moduleinfo->modulename,
+            'iteminstance' => $moduleinfo->instance,
+            'itemnumber' => 0,
+            'courseid' => $moduleinfo->course
+        ));
         if ($newgradeitem && $oldgradeitem->gradetype == GRADE_TYPE_VALUE && $newgradeitem->gradetype == GRADE_TYPE_VALUE) {
             $params = array(
                 $course,
@@ -772,8 +811,12 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
                 $newgradeitem->grademax
             );
             if (!component_callback('mod_' . $moduleinfo->modulename, 'rescale_activity_grades', $params)) {
-                throw new \moodle_exception('cannotreprocessgrades', '', course_get_url($course, $cm->section),
-                    $moduleinfo->modulename);
+                throw new \moodle_exception(
+                    'cannotreprocessgrades',
+                    '',
+                    course_get_url($course, $cm->section),
+                    $moduleinfo->modulename
+                );
             }
         }
     }
@@ -829,7 +872,8 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
  * @param string $modulename module name of the lib to include
  * @throws moodle_exception if lib.php file for the module does not exist
  */
-function include_modulelib($modulename) {
+function include_modulelib($modulename)
+{
     global $CFG;
     $modlib = "$CFG->dirroot/mod/$modulename/lib.php";
     if (file_exists($modlib)) {
@@ -847,47 +891,50 @@ function include_modulelib($modulename) {
  * @return array required data for updating a module
  * @since  Moodle 3.2
  */
-function get_moduleinfo_data($cm, $course) {
+function get_moduleinfo_data($cm, $course)
+{
     global $CFG;
     require_once($CFG->libdir . '/gradelib.php');
 
     list($cm, $context, $module, $data, $cw) = can_update_moduleinfo($cm);
 
-    $data->coursemodule       = $cm->id;
-    $data->section            = $cw->section;  // The section number itself - relative!!! (section column in course_sections)
-    $data->visible            = $cm->visible; //??  $cw->visible ? $cm->visible : 0; // section hiding overrides
+    $data->coursemodule = $cm->id;
+    $data->section = $cw->section;  // The section number itself - relative!!! (section column in course_sections)
+    $data->visible = $cm->visible; //??  $cw->visible ? $cm->visible : 0; // section hiding overrides
     $data->visibleoncoursepage = $cm->visibleoncoursepage;
-    $data->cmidnumber         = $cm->idnumber;          // The cm IDnumber
-    $data->groupmode          = groups_get_activity_groupmode($cm); // locked later if forced
-    $data->groupingid         = $cm->groupingid;
-    $data->course             = $course->id;
-    $data->module             = $module->id;
-    $data->modulename         = $module->name;
-    $data->instance           = $cm->instance;
-    $data->completion         = $cm->completion;
-    $data->completionview     = $cm->completionview;
+    $data->cmidnumber = $cm->idnumber;          // The cm IDnumber
+    $data->groupmode = groups_get_activity_groupmode($cm); // locked later if forced
+    $data->groupingid = $cm->groupingid;
+    $data->course = $course->id;
+    $data->module = $module->id;
+    $data->modulename = $module->name;
+    $data->instance = $cm->instance;
+    $data->completion = $cm->completion;
+    $data->completionview = $cm->completionview;
     $data->completionexpected = $cm->completionexpected;
     $data->completionusegrade = is_null($cm->completiongradeitemnumber) ? 0 : 1;
     $data->completionpassgrade = $cm->completionpassgrade;
     $data->completiongradeitemnumber = $cm->completiongradeitemnumber;
-    $data->showdescription    = $cm->showdescription;
-    $data->downloadcontent    = $cm->downloadcontent;
-    $data->lang               = $cm->lang;
-    $data->tags               = core_tag_tag::get_item_tags_array('core', 'course_modules', $cm->id);
+    $data->showdescription = $cm->showdescription;
+    $data->downloadcontent = $cm->downloadcontent;
+    $data->lang = $cm->lang;
+    $data->tags = core_tag_tag::get_item_tags_array('core', 'course_modules', $cm->id);
     if (!empty($CFG->enableavailability)) {
         $data->availabilityconditionsjson = $cm->availability;
     }
 
     if (plugin_supports('mod', $data->modulename, FEATURE_MOD_INTRO, true)) {
         $draftid_editor = file_get_submitted_draft_itemid('introeditor');
-        $currentintro = file_prepare_draft_area($draftid_editor, $context->id, 'mod_'.$data->modulename, 'intro', 0, array('subdirs'=>true), $data->intro);
-        $data->introeditor = array('text'=>$currentintro, 'format'=>$data->introformat, 'itemid'=>$draftid_editor);
+        $currentintro = file_prepare_draft_area($draftid_editor, $context->id, 'mod_' . $data->modulename, 'intro', 0, array('subdirs' => true), $data->intro);
+        $data->introeditor = array('text' => $currentintro, 'format' => $data->introformat, 'itemid' => $draftid_editor);
     }
 
-    if (plugin_supports('mod', $data->modulename, FEATURE_ADVANCED_GRADING, false)
-            and has_capability('moodle/grade:managegradingforms', $context)) {
-        require_once($CFG->dirroot.'/grade/grading/lib.php');
-        $gradingman = get_grading_manager($context, 'mod_'.$data->modulename);
+    if (
+        plugin_supports('mod', $data->modulename, FEATURE_ADVANCED_GRADING, false)
+        and has_capability('moodle/grade:managegradingforms', $context)
+    ) {
+        require_once($CFG->dirroot . '/grade/grading/lib.php');
+        $gradingman = get_grading_manager($context, 'mod_' . $data->modulename);
         $data->_advancedgradingdata['methods'] = $gradingman->get_available_methods();
         $areas = $gradingman->get_available_areas();
 
@@ -895,10 +942,10 @@ function get_moduleinfo_data($cm, $course) {
             $gradingman->set_area($areaname);
             $method = $gradingman->get_active_method();
             $data->_advancedgradingdata['areas'][$areaname] = array(
-                'title'  => $areatitle,
+                'title' => $areatitle,
                 'method' => $method,
             );
-            $formfield = 'advancedgradingmethod_'.$areaname;
+            $formfield = 'advancedgradingmethod_' . $areaname;
             $data->{$formfield} = $method;
         }
     }
@@ -957,7 +1004,8 @@ function get_moduleinfo_data($cm, $course) {
  * @throws coding_exception if you try to set a section other than 0 on a module type that has feature flag FEATURE_CAN_DISPLAY
  * set to false.
  */
-function prepare_new_moduleinfo_data($course, $modulename, $section, string $suffix = '') {
+function prepare_new_moduleinfo_data($course, $modulename, $section, string $suffix = '')
+{
     global $CFG;
 
     // Module types with this flag set to false must always be in section number 0.
@@ -970,17 +1018,17 @@ function prepare_new_moduleinfo_data($course, $modulename, $section, string $suf
     $cm = null;
 
     $data = new stdClass();
-    $data->section          = $section;  // The section number itself - relative!!! (section column in course_sections)
-    $data->visible          = $cw->visible;
-    $data->course           = $course->id;
-    $data->module           = $module->id;
-    $data->modulename       = $module->name;
-    $data->groupmode        = $course->groupmode;
-    $data->groupingid       = $course->defaultgroupingid;
-    $data->id               = '';
-    $data->instance         = '';
-    $data->coursemodule     = '';
-    $data->downloadcontent  = DOWNLOAD_COURSE_CONTENT_ENABLED;
+    $data->section = $section;  // The section number itself - relative!!! (section column in course_sections)
+    $data->visible = $cw->visible;
+    $data->course = $course->id;
+    $data->module = $module->id;
+    $data->modulename = $module->name;
+    $data->groupmode = $course->groupmode;
+    $data->groupingid = $course->defaultgroupingid;
+    $data->id = '';
+    $data->instance = '';
+    $data->coursemodule = '';
+    $data->downloadcontent = DOWNLOAD_COURSE_CONTENT_ENABLED;
 
     // Apply completion defaults.
     $defaults = \core_completion\manager::get_default_completion($course, $module, true, $suffix);
@@ -990,23 +1038,25 @@ function prepare_new_moduleinfo_data($course, $modulename, $section, string $suf
 
     if (plugin_supports('mod', $data->modulename, FEATURE_MOD_INTRO, true)) {
         $draftid_editor = file_get_submitted_draft_itemid('introeditor');
-        file_prepare_draft_area($draftid_editor, null, null, null, null, array('subdirs'=>true));
+        file_prepare_draft_area($draftid_editor, null, null, null, null, array('subdirs' => true));
         $data->introeditor = array('text' => '', 'format' => editors_get_preferred_format(), 'itemid' => $draftid_editor);
     }
 
-    if (plugin_supports('mod', $data->modulename, FEATURE_ADVANCED_GRADING, false)
-            and has_capability('moodle/grade:managegradingforms', $context)) {
-        require_once($CFG->dirroot.'/grade/grading/lib.php');
+    if (
+        plugin_supports('mod', $data->modulename, FEATURE_ADVANCED_GRADING, false)
+        and has_capability('moodle/grade:managegradingforms', $context)
+    ) {
+        require_once($CFG->dirroot . '/grade/grading/lib.php');
 
         $data->_advancedgradingdata['methods'] = grading_manager::available_methods();
-        $areas = grading_manager::available_areas('mod_'.$module->name);
+        $areas = grading_manager::available_areas('mod_' . $module->name);
 
         foreach ($areas as $areaname => $areatitle) {
             $data->_advancedgradingdata['areas'][$areaname] = array(
-                'title'  => $areatitle,
+                'title' => $areatitle,
                 'method' => '',
             );
-            $formfield = 'advancedgradingmethod_'.$areaname;
+            $formfield = 'advancedgradingmethod_' . $areaname;
             $data->{$formfield} = '';
         }
     }
