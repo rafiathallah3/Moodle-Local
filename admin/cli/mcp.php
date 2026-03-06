@@ -507,6 +507,10 @@ class MoodleMCPServer
                     $question->shuffleanswers = 1;
                     $question->answernumbering = 'abc';
                     $question->showstandardinstruction = 0;
+                    $question->shownumcorrect = 1;
+                    $question->correctfeedback = ['text' => '', 'format' => FORMAT_HTML];
+                    $question->partiallycorrectfeedback = ['text' => '', 'format' => FORMAT_HTML];
+                    $question->incorrectfeedback = ['text' => '', 'format' => FORMAT_HTML];
                     $question->answer = [];
                     $question->fraction = [];
                     $question->feedback = [];
@@ -525,12 +529,220 @@ class MoodleMCPServer
                 }
 
                 $qtypeobj = question_bank::get_qtype($qtype);
-                $qtypeobj->save_question($question, null);
+                $qtypeobj->save_question($question, $question);
 
                 return [
                     'status' => 'created',
                     'question_id' => (int) $question->id,
                     'message' => "Question '{$args['name']}' ({$qtype}) created in category {$catid}."
+                ];
+            }
+        ];
+
+        $this->tools['transcribe_audio'] = [
+            'description' => 'Transcribe an audio file using OpenAI Whisper or Azure Speech by running a Python script, and process the transcript with Google Gemini.',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'audio_path' => [
+                        'type' => 'string',
+                        'description' => 'Absolute path to the audio file to transcribe.'
+                    ],
+                    'model' => [
+                        'type' => 'string',
+                        'description' => 'Transcription model to use. Choices: "openai" or "azure".',
+                        'enum' => ['openai', 'azure']
+                    ],
+                    'gemini_prompt' => [
+                        'type' => 'string',
+                        'description' => 'The prompt to Google Gemini. The transcript will be appended to this. Default: "Please summarize the following transcript:"'
+                    ]
+                ],
+                'required' => ['audio_path', 'model']
+            ],
+            'handler' => function ($args) {
+                $audio_path = escapeshellarg($args['audio_path']);
+                $model = escapeshellarg($args['model']);
+                $prompt_arg = '';
+                if (!empty($args['gemini_prompt'])) {
+                    $prompt_arg = '--prompt ' . escapeshellarg($args['gemini_prompt']);
+                }
+
+                $python_script = escapeshellarg(__DIR__ . '/transcribe.py');
+
+                $command = "python $python_script --audio $audio_path --model $model $prompt_arg";
+
+                exec($command, $output, $return_var);
+                $output_str = implode("\n", $output);
+
+                $result = json_decode($output_str, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    if (isset($result['status']) && $result['status'] === 'error') {
+                        throw new Exception($result['message']);
+                    }
+                    return $result;
+                }
+
+                throw new Exception("Python script failed. Exit code: $return_var. Output: $output_str");
+            }
+        ];
+
+        $this->tools['convert_orphaned_categories'] = [
+            'description' => 'Convert orphaned question bank categories in a course into proper Moodle 4.x Question Bank (qbank) activity modules. Useful if question categories were created without their corresponding qbank instances.',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'courseid' => [
+                        'type' => 'integer',
+                        'description' => 'The ID of the course to scan and fix.'
+                    ]
+                ],
+                'required' => ['courseid']
+            ],
+            'handler' => function ($args) {
+                global $DB, $CFG;
+
+                $courseid = $args['courseid'];
+
+                require_once($CFG->dirroot . '/course/lib.php');
+                require_once($CFG->dirroot . '/question/classes/local/bank/question_bank_helper.php');
+                require_once($CFG->libdir . '/questionlib.php');
+
+                $course = get_course($courseid);
+                if (!$course) {
+                    throw new Exception("Course with id {$courseid} not found");
+                }
+
+                $adminuser = get_admin();
+                if (!$adminuser) {
+                    throw new Exception("Could not find admin user for capability check.");
+                }
+                \core\session\manager::set_user($adminuser);
+
+                $coursecontext = \context_course::instance($courseid);
+
+                // Find orphaned categories in the course context (excluding 'top')
+                $sql = "SELECT id, name, contextid, parent FROM {question_categories} 
+                        WHERE contextid = :ctx AND name != 'top'";
+                $categories = $DB->get_records_sql($sql, ['ctx' => $coursecontext->id]);
+
+                if (empty($categories)) {
+                    return [
+                        'status' => 'success',
+                        'message' => "No orphaned categories found in course {$courseid}.",
+                        'converted' => 0
+                    ];
+                }
+
+                $converted_count = 0;
+                $messages = [];
+
+                foreach ($categories as $cat) {
+                    // Check if qbank with exactly this name already exists
+                    $modinfo = get_fast_modinfo($course);
+                    $existing = false;
+                    foreach ($modinfo->get_instances_of('qbank') as $qbank) {
+                        if ($qbank->name === $cat->name) {
+                            $messages[] = "qbank activity '{$cat->name}' already exists. Skipping.";
+                            $existing = true;
+                            break;
+                        }
+                    }
+
+                    if ($existing)
+                        continue;
+
+                    // Create the qbank module
+                    $cm = \core_question\local\bank\question_bank_helper::create_default_open_instance(
+                        $course,
+                        $cat->name
+                    );
+
+                    // Provide the proper name when updating the module
+                    $DB->set_field('qbank', 'name', $cat->name, ['id' => $cm->instance]);
+                    $DB->set_field('course_modules', 'idnumber', $cat->name, ['id' => $cm->id]);
+                    $DB->set_field('qbank', 'intro', 'Created to rescue orphaned category', ['id' => $cm->instance]);
+                    $DB->set_field('qbank', 'introformat', FORMAT_HTML, ['id' => $cm->instance]);
+
+                    // Get the new module context and its default top category
+                    $modcontext = \context_module::instance($cm->id);
+                    $topcategory = question_get_default_category($modcontext->id, true);
+
+                    // Re-parent the orphaned category into the new qbank's context
+                    $cat->contextid = $modcontext->id;
+                    $cat->parent = $topcategory->id;
+                    $DB->update_record('question_categories', $cat);
+
+                    $converted_count++;
+                    $messages[] = "Successfully converted '{$cat->name}' into qbank activity (CM ID: {$cm->id}).";
+                }
+
+                if ($converted_count > 0) {
+                    rebuild_course_cache($courseid, true);
+                }
+
+                return [
+                    'status' => 'success',
+                    'message' => "Converted {$converted_count} orphaned categories in course {$courseid}.",
+                    'converted' => $converted_count,
+                    'details' => $messages
+                ];
+            }
+        ];
+
+        $this->tools['recover_hidden_qbank'] = [
+            'description' => 'Recover a hidden Question Bank (qbank) by removing its deletioninprogress flag. Useful if a qbank is stuck in a deleting state and missing from the UI.',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'courseid' => [
+                        'type' => 'integer',
+                        'description' => 'The ID of the course.'
+                    ],
+                    'qbank_name' => [
+                        'type' => 'string',
+                        'description' => 'The name of the Question Bank to recover.'
+                    ]
+                ],
+                'required' => ['courseid', 'qbank_name']
+            ],
+            'handler' => function ($args) {
+                global $DB, $CFG;
+
+                $courseid = $args['courseid'];
+                $qbank_name = $args['qbank_name'];
+
+                $sql = "SELECT cm.id, cm.course, cm.instance, cm.visible, cm.deletioninprogress 
+                        FROM {course_modules} cm 
+                        JOIN {qbank} q ON q.id = cm.instance 
+                        WHERE cm.course = :courseid AND q.name = :name";
+
+                $records = $DB->get_records_sql($sql, ['courseid' => $courseid, 'name' => $qbank_name]);
+
+                if (empty($records)) {
+                    throw new Exception("Question Bank '{$qbank_name}' not found in course {$courseid}.");
+                }
+
+                $recovered_count = 0;
+                foreach ($records as $record) {
+                    if ($record->deletioninprogress) {
+                        $DB->set_field('course_modules', 'deletioninprogress', 0, ['id' => $record->id]);
+                        $recovered_count++;
+                    }
+                }
+
+                if ($recovered_count > 0) {
+                    require_once($CFG->dirroot . '/course/lib.php');
+                    rebuild_course_cache($courseid, true);
+                    return [
+                        'status' => 'success',
+                        'message' => "Recovered {$recovered_count} instance(s) of Question Bank '{$qbank_name}'."
+                    ];
+                }
+
+                return [
+                    'status' => 'info',
+                    'message' => "Question Bank '{$qbank_name}' was found, but it was not hidden by a deletioninprogress flag."
                 ];
             }
         ];

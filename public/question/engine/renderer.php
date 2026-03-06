@@ -36,7 +36,8 @@ defined('MOODLE_INTERNAL') || die();
  * @copyright  2009 The Open University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class core_question_renderer extends plugin_renderer_base {
+class core_question_renderer extends plugin_renderer_base
+{
 
     /**
      * Generate the display of a question in a particular state, and with certain
@@ -54,11 +55,16 @@ class core_question_renderer extends plugin_renderer_base {
      *      value that gets displayed as Information. Null means no number is displayed.
      * @return string HTML representation of the question.
      */
-    public function question(question_attempt $qa, qbehaviour_renderer $behaviouroutput,
-            qtype_renderer $qtoutput, question_display_options $options, $number) {
+    public function question(
+        question_attempt $qa,
+        qbehaviour_renderer $behaviouroutput,
+        qtype_renderer $qtoutput,
+        question_display_options $options,
+        $number
+    ) {
 
         // If not already set, record the questionidentifier.
-        $options = clone($options);
+        $options = clone ($options);
         if (!$options->has_question_identifier()) {
             $options->questionidentifier = $this->question_number_text($number);
         }
@@ -74,27 +80,157 @@ class core_question_renderer extends plugin_renderer_base {
             ))
         ));
 
-        $output .= html_writer::tag('div',
-                $this->info($qa, $behaviouroutput, $qtoutput, $options, $number),
-                array('class' => 'info'));
+        $output .= html_writer::tag(
+            'div',
+            $this->info($qa, $behaviouroutput, $qtoutput, $options, $number),
+            array('class' => 'info')
+        );
 
         $output .= html_writer::start_tag('div', array('class' => 'content'));
 
-        $output .= html_writer::tag('div',
-                $this->add_part_heading($qtoutput->formulation_heading(),
-                    $this->formulation($qa, $behaviouroutput, $qtoutput, $options)),
-                array('class' => 'formulation clearfix'));
-        $output .= html_writer::nonempty_tag('div',
-                $this->add_part_heading(get_string('feedback', 'question'),
-                    $this->outcome($qa, $behaviouroutput, $qtoutput, $options)),
-                array('class' => 'outcome clearfix'));
-        $output .= html_writer::nonempty_tag('div',
-                $this->add_part_heading(get_string('comments', 'question'),
-                    $this->manual_comment($qa, $behaviouroutput, $qtoutput, $options)),
-                array('class' => 'comment clearfix'));
-        $output .= html_writer::nonempty_tag('div',
-                $this->response_history($qa, $behaviouroutput, $qtoutput, $options),
-                array('class' => 'history clearfix border p-2'));
+        $output .= html_writer::tag(
+            'div',
+            $this->add_part_heading(
+                $qtoutput->formulation_heading(),
+                $this->formulation($qa, $behaviouroutput, $qtoutput, $options)
+            ),
+            array('class' => 'formulation clearfix')
+        );
+        $output .= html_writer::nonempty_tag(
+            'div',
+            $this->add_part_heading(
+                get_string('feedback', 'question'),
+                $this->outcome($qa, $behaviouroutput, $qtoutput, $options)
+            ),
+            array('class' => 'outcome clearfix')
+        );
+
+        // Inject custom section conditionally here
+        $hasaudio = false;
+
+        // 1. Check for audio tags in the text response (e.g. from RecordRTC)
+        $responsetext = $qa->get_last_qt_var('answer', '');
+        if (stripos($responsetext, '<audio') !== false || stripos($responsetext, '.mp3') !== false || stripos($responsetext, '.ogg') !== false || stripos($responsetext, '.wav') !== false) {
+            $hasaudio = true;
+        }
+
+        // 2. Check for uploaded file attachments with audio mime types or embedded RecordRTC audio
+        $audiofile = null;
+        // Check ANY file area available in the latest step data
+        $stepdata = $qa->get_last_qt_data();
+        if ($stepdata) {
+            foreach (array_keys($stepdata) as $qtvar) {
+                $files = $qa->get_last_qt_files($qtvar, $options->context->id);
+                if (!empty($files)) {
+                    foreach ($files as $file) {
+                        $mimetype = $file->get_mimetype();
+                        $filename = $file->get_filename();
+                        // Make sure it is an audio file
+                        if (strpos($mimetype, 'audio/') === 0 || preg_match('/\.(mp3|wav|ogg)$/i', $filename)) {
+                            $hasaudio = true;
+                            $audiofile = $file;
+                            break 2; // Break both loops since we found an audio file
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($hasaudio) {
+            $transcript_html = 'Audio detected, but no transcript available.';
+
+            if ($audiofile) {
+                // Copy the file from Moodle's virtual file storage to a real temp file
+                $tempdir = make_request_directory();
+                $tempfilepath = $tempdir . '/' . $audiofile->get_filename();
+                $audiofile->copy_content_to($tempfilepath);
+
+                // Run the Python transcription script
+                global $CFG;
+                $script_path = $CFG->dirroot . '/admin/cli/transcribe.py';
+                if (!file_exists($script_path)) {
+                    // If dirroot points to the public/ folder, the script is in the parent directory
+                    $script_path = dirname($CFG->dirroot) . '/admin/cli/transcribe.py';
+                }
+                // Escape arguments to be safe
+                $escaped_script = escapeshellarg($script_path);
+                $escaped_audio = escapeshellarg($tempfilepath);
+
+                // Assuming we use gemini as model
+                $command = "python $escaped_script --audio $escaped_audio --model gemini 2>&1";
+                $output_json = shell_exec($command);
+
+                if ($output_json) {
+                    $result = json_decode($output_json, true);
+                    if ($result && isset($result['status']) && $result['status'] === 'success') {
+                        $transcript_html = '<strong>Transcript:</strong><br/>' . nl2br(htmlspecialchars($result['transcript']));
+                    } else if ($result && isset($result['message'])) {
+                        $transcript_html = '<strong>Transcription Error:</strong> ' . htmlspecialchars($result['message']);
+                    } else {
+                        $transcript_html = '<strong>Transcription Error:</strong> Could not parse output.<br/><pre>' . htmlspecialchars($output_json) . '</pre>';
+                    }
+                }
+            } else {
+                $transcript_html = '<em>Audio embedded via HTML tag. Transcription of RecordRTC embeddings requires retrieving the draft file directly.</em>';
+            }
+
+            $output .= html_writer::tag(
+                'div',
+                html_writer::tag('div', $transcript_html, array('class' => 'alert alert-info mt-3 mb-3')),
+                array('class' => 'custom-injected-section')
+            );
+        }
+
+        // Inject custom AI Diagnosis section via AJAX to prevent slow page load
+        $usageid = $qa->get_usage_id();
+        $slot = $qa->get_slot();
+        $contextid = $options->context->id;
+
+        $diag_container_id = 'diag-container-' . $usageid . '-' . $slot;
+        $diag_html = '
+            <div id="' . $diag_container_id . '" class="custom-diagnosis-section mt-3 mb-3">
+                <button type="button" class="btn btn-secondary btn-sm diagnose-btn" onclick="fetchDiagnosis(' . $usageid . ', ' . $slot . ', ' . $contextid . ', \'' . sesskey() . '\', \'' . $diag_container_id . '\')">
+                    Get AI Diagnosis
+                </button>
+            </div>
+            <script>
+            if (typeof fetchDiagnosis !== "function") {
+                function fetchDiagnosis(usageid, slot, contextid, sesskey, containerId) {
+                    var container = document.getElementById(containerId);
+                    container.innerHTML = "<em>Loading AI diagnosis... This may take a few seconds.</em>";
+                    fetch(M.cfg.wwwroot + "/local/diagnose_ajax.php?usageid=" + usageid + "&slot=" + slot + "&contextid=" + contextid + "&sesskey=" + sesskey)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            // The AJAX endpoint already outputs <br/> and <h2> instead of \n or **
+                            container.innerHTML = "<div class=\"alert alert-success mt-3 mb-3\"><strong>AI Diagnosis:</strong><br/>" + data.diagnosis + "</div>";
+                        } else {
+                            container.innerHTML = "<div class=\"alert alert-warning mt-3 mb-3\"><strong>AI Diagnosis Error:</strong> " + data.message + "</div>";
+                        }
+                    }).catch(err => {
+                        container.innerHTML = "<div class=\"alert alert-danger mt-3 mb-3\">Error fetching diagnosis. Please try again.</div>";
+                    });
+                }
+            }
+            </script>
+        ';
+
+        $output .= $diag_html;
+
+        $output .= html_writer::nonempty_tag(
+            'div',
+            $this->add_part_heading(
+                get_string('comments', 'question'),
+                $this->manual_comment($qa, $behaviouroutput, $qtoutput, $options)
+            ),
+            array('class' => 'comment clearfix')
+        );
+
+        $output .= html_writer::nonempty_tag(
+            'div',
+            $this->response_history($qa, $behaviouroutput, $qtoutput, $options),
+            array('class' => 'history clearfix border p-2')
+        );
 
         $output .= html_writer::end_tag('div');
         $output .= html_writer::end_tag('div');
@@ -114,8 +250,13 @@ class core_question_renderer extends plugin_renderer_base {
      *      value that gets displayed as Information. Null means no number is displayed.
      * @return HTML fragment.
      */
-    protected function info(question_attempt $qa, qbehaviour_renderer $behaviouroutput,
-            qtype_renderer $qtoutput, question_display_options $options, $number) {
+    protected function info(
+        question_attempt $qa,
+        qbehaviour_renderer $behaviouroutput,
+        qtype_renderer $qtoutput,
+        question_display_options $options,
+        $number
+    ) {
         $output = '';
         $output .= $this->number($number);
         $output .= $this->status($qa, $behaviouroutput, $options);
@@ -134,15 +275,19 @@ class core_question_renderer extends plugin_renderer_base {
      *      value that gets displayed as Information. Null means no number is displayed.
      * @return HTML fragment.
      */
-    protected function number($number) {
+    protected function number($number)
+    {
         if (trim($number ?? '') === '') {
             return '';
         }
         if (trim($number) === 'i') {
             $numbertext = get_string('information', 'question');
         } else {
-            $numbertext = get_string('questionx', 'question',
-                    html_writer::tag('span', s($number), array('class' => 'qno')));
+            $numbertext = get_string(
+                'questionx',
+                'question',
+                html_writer::tag('span', s($number), array('class' => 'qno'))
+            );
         }
         return html_writer::tag('h3', $numbertext, array('class' => 'no'));
     }
@@ -153,7 +298,8 @@ class core_question_renderer extends plugin_renderer_base {
      * @param string|null $number e.g. '123' or 'i'. null or '' means do not display anything number-related.
      * @return string e.g. 'Question 123' or 'Information' or ''.
      */
-    protected function question_number_text(?string $number): string {
+    protected function question_number_text(?string $number): string
+    {
         $number = $number ?? '';
         // Trim the question number of whitespace, including &nbsp;.
         $trimmed = trim(html_entity_decode($number), " \n\r\t\v\x00\xC2\xA0");
@@ -174,7 +320,8 @@ class core_question_renderer extends plugin_renderer_base {
      * @param string $content the content of the section.
      * @return string HTML fragment with the heading added.
      */
-    protected function add_part_heading($heading, $content) {
+    protected function add_part_heading($heading, $content)
+    {
         if ($content) {
             $content = html_writer::tag('h4', $heading, array('class' => 'accesshide')) . $content;
         }
@@ -190,10 +337,16 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    protected function status(question_attempt $qa, qbehaviour_renderer $behaviouroutput,
-            question_display_options $options) {
-        return html_writer::tag('div', $qa->get_state_string($options->correctness),
-                array('class' => 'state'));
+    protected function status(
+        question_attempt $qa,
+        qbehaviour_renderer $behaviouroutput,
+        question_display_options $options
+    ) {
+        return html_writer::tag(
+            'div',
+            $qa->get_state_string($options->correctness),
+            array('class' => 'state')
+        );
     }
 
     /**
@@ -203,10 +356,13 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    protected function mark_summary(question_attempt $qa, qbehaviour_renderer $behaviouroutput, question_display_options $options) {
-        return html_writer::nonempty_tag('div',
-                $behaviouroutput->mark_summary($qa, $this, $options),
-                array('class' => 'grade'));
+    protected function mark_summary(question_attempt $qa, qbehaviour_renderer $behaviouroutput, question_display_options $options)
+    {
+        return html_writer::nonempty_tag(
+            'div',
+            $behaviouroutput->mark_summary($qa, $this, $options),
+            array('class' => 'grade')
+        );
     }
 
     /**
@@ -215,15 +371,18 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    public function standard_mark_summary(question_attempt $qa, qbehaviour_renderer $behaviouroutput, question_display_options $options) {
+    public function standard_mark_summary(question_attempt $qa, qbehaviour_renderer $behaviouroutput, question_display_options $options)
+    {
         if (!$options->marks) {
             return '';
 
         } else if ($qa->get_max_mark() == 0) {
             return get_string('notgraded', 'question');
 
-        } else if ($options->marks == question_display_options::MAX_ONLY ||
-                is_null($qa->get_fraction())) {
+        } else if (
+            $options->marks == question_display_options::MAX_ONLY ||
+            is_null($qa->get_fraction())
+        ) {
             return $behaviouroutput->marked_out_of_max($qa, $this, $options);
 
         } else {
@@ -237,7 +396,8 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    public function standard_marked_out_of_max(question_attempt $qa, question_display_options $options) {
+    public function standard_marked_out_of_max(question_attempt $qa, question_display_options $options)
+    {
         return get_string('markedoutofmax', 'question', $qa->format_max_mark($options->markdp));
     }
 
@@ -247,7 +407,8 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    public function standard_mark_out_of_max(question_attempt $qa, question_display_options $options) {
+    public function standard_mark_out_of_max(question_attempt $qa, question_display_options $options)
+    {
         $a = new stdClass();
         $a->mark = $qa->format_mark($options->markdp);
         $a->max = $qa->format_max_mark($options->markdp);
@@ -260,7 +421,8 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_attempt $qa the question attempt to display.
      * @param int $flagsoption the option that says whether flags should be displayed.
      */
-    protected function question_flag(question_attempt $qa, $flagsoption) {
+    protected function question_flag(question_attempt $qa, $flagsoption)
+    {
         $divattributes = array('class' => 'questionflag');
 
         switch ($flagsoption) {
@@ -284,13 +446,20 @@ class core_question_renderer extends plugin_renderer_base {
                 }
                 $postdata = question_flags::get_postdata($qa);
 
-                $flagcontent = html_writer::empty_tag('input',
-                                array('type' => 'hidden', 'name' => $id, 'value' => 0)) .
-                        html_writer::empty_tag('input',
-                                array('type' => 'hidden', 'value' => $postdata, 'class' => 'questionflagpostdata')) .
-                        html_writer::empty_tag('input', $checkboxattributes) .
-                        html_writer::tag('label', $this->get_flag_html($qa->is_flagged(), $id . 'img'),
-                                array('id' => $id . 'label', 'for' => $id . 'checkbox')) . "\n";
+                $flagcontent = html_writer::empty_tag(
+                    'input',
+                    array('type' => 'hidden', 'name' => $id, 'value' => 0)
+                ) .
+                    html_writer::empty_tag(
+                        'input',
+                        array('type' => 'hidden', 'value' => $postdata, 'class' => 'questionflagpostdata')
+                    ) .
+                    html_writer::empty_tag('input', $checkboxattributes) .
+                    html_writer::tag(
+                        'label',
+                        $this->get_flag_html($qa->is_flagged(), $id . 'img'),
+                        array('id' => $id . 'label', 'for' => $id . 'checkbox')
+                    ) . "\n";
 
                 $divattributes = array(
                     'class' => 'questionflag editable',
@@ -312,7 +481,8 @@ class core_question_renderer extends plugin_renderer_base {
      * @param string $id an id to be added as an attribute to the img (optional).
      * @return string the img tag.
      */
-    protected function get_flag_html($flagged, $id = '') {
+    protected function get_flag_html($flagged, $id = '')
+    {
         if ($flagged) {
             $icon = 'i/flagged';
             $label = get_string('clickunflag', 'question');
@@ -341,7 +511,8 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return string
      */
-    protected function edit_question_link(question_attempt $qa, question_display_options $options) {
+    protected function edit_question_link(question_attempt $qa, question_display_options $options)
+    {
         if (empty($options->editquestionparams)) {
             return '';
         }
@@ -353,10 +524,15 @@ class core_question_renderer extends plugin_renderer_base {
         $params['id'] = $qa->get_question_id();
         $editurl = new moodle_url('/question/bank/editquestion/question.php', $params);
 
-        return html_writer::tag('div', html_writer::link(
-                $editurl, $this->pix_icon('t/edit', get_string('edit'), '', array('class' => 'iconsmall')) .
-                get_string('editquestion', 'question')),
-                array('class' => 'editquestion'));
+        return html_writer::tag(
+            'div',
+            html_writer::link(
+                $editurl,
+                $this->pix_icon('t/edit', get_string('edit'), '', array('class' => 'iconsmall')) .
+                get_string('editquestion', 'question')
+            ),
+            array('class' => 'editquestion')
+        );
     }
 
     /**
@@ -373,19 +549,27 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    protected function formulation(question_attempt $qa, qbehaviour_renderer $behaviouroutput,
-            qtype_renderer $qtoutput, question_display_options $options) {
+    protected function formulation(
+        question_attempt $qa,
+        qbehaviour_renderer $behaviouroutput,
+        qtype_renderer $qtoutput,
+        question_display_options $options
+    ) {
         $output = '';
         $output .= html_writer::empty_tag('input', array(
-                'type' => 'hidden',
-                'name' => $qa->get_control_field_name('sequencecheck'),
-                'value' => $qa->get_sequence_check_count()));
+            'type' => 'hidden',
+            'name' => $qa->get_control_field_name('sequencecheck'),
+            'value' => $qa->get_sequence_check_count()
+        ));
         $output .= $qtoutput->formulation_and_controls($qa, $options);
         if ($options->clearwrong) {
             $output .= $qtoutput->clear_wrong($qa);
         }
-        $output .= html_writer::nonempty_tag('div',
-                $behaviouroutput->controls($qa, $options), array('class' => 'im-controls'));
+        $output .= html_writer::nonempty_tag(
+            'div',
+            $behaviouroutput->controls($qa, $options),
+            array('class' => 'im-controls')
+        );
         return $output;
     }
 
@@ -401,22 +585,39 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    protected function outcome(question_attempt $qa, qbehaviour_renderer $behaviouroutput,
-            qtype_renderer $qtoutput, question_display_options $options) {
+    protected function outcome(
+        question_attempt $qa,
+        qbehaviour_renderer $behaviouroutput,
+        qtype_renderer $qtoutput,
+        question_display_options $options
+    ) {
         $output = '';
-        $output .= html_writer::nonempty_tag('div',
-                $qtoutput->feedback($qa, $options), array('class' => 'feedback'));
-        $output .= html_writer::nonempty_tag('div',
-                $behaviouroutput->feedback($qa, $options), array('class' => 'im-feedback'));
-        $output .= html_writer::nonempty_tag('div',
-                $options->extrainfocontent, array('class' => 'extra-feedback'));
+        $output .= html_writer::nonempty_tag(
+            'div',
+            $qtoutput->feedback($qa, $options),
+            array('class' => 'feedback')
+        );
+        $output .= html_writer::nonempty_tag(
+            'div',
+            $behaviouroutput->feedback($qa, $options),
+            array('class' => 'im-feedback')
+        );
+        $output .= html_writer::nonempty_tag(
+            'div',
+            $options->extrainfocontent,
+            array('class' => 'extra-feedback')
+        );
         return $output;
     }
 
-    protected function manual_comment(question_attempt $qa, qbehaviour_renderer $behaviouroutput,
-            qtype_renderer $qtoutput, question_display_options $options) {
+    protected function manual_comment(
+        question_attempt $qa,
+        qbehaviour_renderer $behaviouroutput,
+        qtype_renderer $qtoutput,
+        question_display_options $options
+    ) {
         return $qtoutput->manual_comment($qa, $options) .
-                $behaviouroutput->manual_comment($qa, $options);
+            $behaviouroutput->manual_comment($qa, $options);
     }
 
     /**
@@ -431,15 +632,19 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options controls what should and should not be displayed.
      * @return HTML fragment.
      */
-    protected function response_history(question_attempt $qa, qbehaviour_renderer $behaviouroutput,
-            qtype_renderer $qtoutput, question_display_options $options) {
+    protected function response_history(
+        question_attempt $qa,
+        qbehaviour_renderer $behaviouroutput,
+        qtype_renderer $qtoutput,
+        question_display_options $options
+    ) {
 
         if (!$options->history) {
             return '';
         }
 
         $table = new html_table();
-        $table->head  = array (
+        $table->head = array(
             get_string('step', 'question'),
             get_string('time'),
             get_string('action', 'question'),
@@ -456,20 +661,31 @@ class core_question_renderer extends plugin_renderer_base {
             if ($stepno == $qa->get_num_steps()) {
                 $rowclass = 'current';
             } else if (!empty($options->questionreviewlink)) {
-                $url = new moodle_url($options->questionreviewlink,
-                        array('slot' => $qa->get_slot(), 'step' => $i));
-                $stepno = $this->output->action_link($url, $stepno,
-                        new popup_action('click', $url, 'reviewquestion',
-                                array('width' => 450, 'height' => 650)),
-                        array('title' => get_string('reviewresponse', 'question')));
+                $url = new moodle_url(
+                    $options->questionreviewlink,
+                    array('slot' => $qa->get_slot(), 'step' => $i)
+                );
+                $stepno = $this->output->action_link(
+                    $url,
+                    $stepno,
+                    new popup_action(
+                        'click',
+                        $url,
+                        'reviewquestion',
+                        array('width' => 450, 'height' => 650)
+                    ),
+                    array('title' => get_string('reviewresponse', 'question'))
+                );
             }
 
             $restrictedqa = new question_attempt_with_restricted_history($qa, $i, null);
 
-            $row = [$stepno,
-                    userdate($step->get_timecreated(), get_string('strftimedatetimeshortaccurate', 'core_langconfig')),
-                    s($qa->summarise_action($step)) . $this->action_author($step, $options),
-                    $restrictedqa->get_state_string($options->correctness)];
+            $row = [
+                $stepno,
+                userdate($step->get_timecreated(), get_string('strftimedatetimeshortaccurate', 'core_langconfig')),
+                s($qa->summarise_action($step)) . $this->action_author($step, $options),
+                $restrictedqa->get_state_string($options->correctness)
+            ];
 
             if ($options->marks >= question_display_options::MARK_AND_MAX) {
                 $row[] = $qa->format_fraction_as_mark($step->get_fraction(), $options->markdp);
@@ -479,11 +695,17 @@ class core_question_renderer extends plugin_renderer_base {
             $table->data[] = $row;
         }
 
-        return html_writer::tag('h4', get_string('responsehistory', 'question'),
-                        array('class' => 'responsehistoryheader')) .
-                $options->extrahistorycontent .
-                html_writer::tag('div', html_writer::table($table, true),
-                        array('class' => 'responsehistoryheader'));
+        return html_writer::tag(
+            'h4',
+            get_string('responsehistory', 'question'),
+            array('class' => 'responsehistoryheader')
+        ) .
+            $options->extrahistorycontent .
+            html_writer::tag(
+                'div',
+                html_writer::table($table, true),
+                array('class' => 'responsehistoryheader')
+            );
     }
 
     /**
@@ -493,11 +715,14 @@ class core_question_renderer extends plugin_renderer_base {
      * @param question_display_options $options The display options.
      * @return string The link to user's profile.
      */
-    protected function action_author(question_attempt_step $step, question_display_options $options): string {
+    protected function action_author(question_attempt_step $step, question_display_options $options): string
+    {
         if ($options->userinfoinhistory && $step->get_user_id() != $options->userinfoinhistory) {
             return html_writer::link(
-                    new moodle_url('/user/view.php', ['id' => $step->get_user_id(), 'course' => $this->page->course->id]),
-                    $step->get_user_fullname(), ['class' => 'd-table-cell']);
+                new moodle_url('/user/view.php', ['id' => $step->get_user_id(), 'course' => $this->page->course->id]),
+                $step->get_user_fullname(),
+                ['class' => 'd-table-cell']
+            );
         } else {
             return '';
         }

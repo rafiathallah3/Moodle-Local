@@ -106,6 +106,86 @@
         {{/ core_courseformat/local/content/section/content }}
     </div>
 
+    <div class="d-flex justify-content-center my-3 w-100">
+        <button type="button" class="btn btn-primary rounded-circle shadow-sm" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; z-index: 1;" 
+                data-toggle="modal" data-target="#studentQuizModal-{{id}}" data-bs-toggle="modal" data-bs-target="#studentQuizModal-{{id}}" title="Add personal quiz">
+            <i class="fa fa-plus m-0"></i>
+        </button>
+    </div>
+
+    <!-- Student Quiz Modal -->
+    <div class="modal fade" id="studentQuizModal-{{id}}" tabindex="-1" role="dialog" aria-labelledby="studentQuizModalLabel-{{id}}" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="studentQuizModalLabel-{{id}}">Add Personal Quiz</h5>
+                    <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Would you like to add a new personal practice quiz to this section?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="add-personal-quiz-btn-{{id}}">Add Quiz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{#js}}
+    require(['jquery', 'core/notification'], function($, notification) {
+        $('#add-personal-quiz-btn-{{id}}').on('click', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            btn.prop('disabled', true).text('Creating...');
+            $.ajax({
+                url: M.cfg.wwwroot + '/local/create_personal_quiz_ajax.php',
+                type: 'POST',
+                data: {
+                    sectionid: '{{id}}',
+                    sesskey: M.cfg.sesskey
+                },
+                success: function(response) {
+                    try {
+                        var data = typeof response === 'object' ? response : JSON.parse(response);
+                        if (data.success) {
+                            // Close the modal
+                            $('#studentQuizModal-{{id}}').modal('hide');
+                            
+                            // Force a hard reload bypassing cache so the new quiz appears
+                            var url = new URL(window.location.href);
+                            url.searchParams.set('forceRefresh', Date.now());
+                            window.location.href = url.toString();
+                        } else {
+                            notification.addNotification({
+                                message: data.message || 'Failed to create quiz',
+                                type: 'error'
+                            });
+                            btn.prop('disabled', false).text('Add Quiz');
+                        }
+                    } catch (err) {
+                        console.error('Raw response:', response);
+                        var errorStr = typeof response === 'string' ? response : JSON.stringify(response);
+                        notification.addNotification({
+                            message: 'Parse error. Raw response: ' + (errorStr ? errorStr.substring(0, 100) : 'Unknown'),
+                            type: 'error'
+                        });
+                        btn.prop('disabled', false).text('Add Quiz');
+                    }
+                },
+                error: function() {
+                    notification.addNotification({
+                        message: 'Connection error',
+                        type: 'error'
+                    });
+                    btn.prop('disabled', false).text('Add Quiz');
+                }
+            });
+        });
+    });
+    {{/js}}
+
     {{#insertafter}}
         {{#numsections}}
             {{$ core_courseformat/local/content/addsection}}
