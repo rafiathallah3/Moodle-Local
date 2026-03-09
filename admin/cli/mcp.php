@@ -746,6 +746,147 @@ class MoodleMCPServer
                 ];
             }
         ];
+
+        $this->tools['test_critic_quality_gate'] = [
+            'description' => 'Test the AMT-CS1 Critic / Quality Gate functionality with provided inputs.',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'run_id' => [
+                        'type' => 'string',
+                        'description' => 'Optional RUN ID. Auto-generated if not provided.'
+                    ],
+                    'mode' => [
+                        'type' => 'string',
+                        'description' => 'E.g., "submit_answer"'
+                    ],
+                    'policy' => [
+                        'type' => 'object',
+                        'description' => 'Policy constraints.'
+                    ],
+                    'evidence' => [
+                        'type' => 'object',
+                        'description' => 'Evidence context.'
+                    ],
+                    'candidate' => [
+                        'type' => 'object',
+                        'description' => 'Candidate response to evaluate.'
+                    ]
+                ],
+                'required' => ['candidate']
+            ],
+            'handler' => function ($args) {
+                global $CFG;
+                require_once(__DIR__ . '/../../local/orchestrator/classes/critic.php');
+
+                $run_id = $args['run_id'] ?? 'RUN-TEST-' . time();
+                $mode = $args['mode'] ?? 'submit_answer';
+                $policy = $args['policy'] ?? [
+                    'constraints' => [
+                        'no_full_solution' => true,
+                        'hint_only' => true,
+                        'max_hint_tier' => 2,
+                        'max_revision_iters' => 2,
+                        'grounding_required' => false
+                    ]
+                ];
+                $evidence = $args['evidence'] ?? [
+                    'mode' => 'submit_answer',
+                    'student_profile' => ['id' => 2],
+                    'task_context' => [
+                        'courseid' => 2,
+                        'module' => 'assign',
+                        'instanceid' => 1
+                    ],
+                    'student_submission' => 'for (int i=0; i<n; i++)',
+                ];
+                $candidate = $args['candidate'];
+
+                $result = \local_orchestrator\critic::evaluate_candidate($run_id, $mode, $policy, $evidence, $candidate);
+
+                if ($result === null) {
+                    throw new Exception("Critic evaluation failed or returned null.");
+                }
+
+                return $result;
+            }
+        ];
+
+        $this->tools['get_orchestrator_logs'] = [
+            'description' => 'Retrieve AI evaluation logs from the Orchestrator, including the input evidence and final payload.',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'userid' => [
+                        'type' => 'integer',
+                        'description' => 'Filter by User ID.'
+                    ],
+                    'courseid' => [
+                        'type' => 'integer',
+                        'description' => 'Filter by Course ID.'
+                    ],
+                    'limit' => [
+                        'type' => 'integer',
+                        'description' => 'Maximum number of logs to return. Default is 10.',
+                        'default' => 10
+                    ]
+                ]
+            ],
+            'handler' => function ($args) {
+                global $DB;
+
+                $conditions = [];
+                $params = [];
+
+                if (isset($args['userid'])) {
+                    $conditions[] = 'userid = :userid';
+                    $params['userid'] = $args['userid'];
+                }
+
+                if (isset($args['courseid'])) {
+                    $conditions[] = 'courseid = :courseid';
+                    $params['courseid'] = $args['courseid'];
+                }
+
+                $where = '';
+                if (!empty($conditions)) {
+                    $where = 'WHERE ' . implode(' AND ', $conditions);
+                }
+
+                $limit = $args['limit'] ?? 10;
+
+                $sql = "SELECT id, run_id, userid, courseid, module, instanceid, mode, 
+                               input_evidence, routing, agents_called, final_payload, timecreated 
+                        FROM {local_orchestrator_log} $where ORDER BY timecreated DESC";
+
+                $records = $DB->get_records_sql($sql, $params, 0, $limit);
+
+                $results = [];
+                foreach ($records as $record) {
+                    $evidence = @json_decode($record->input_evidence ?? '', true) ?: $record->input_evidence;
+                    $payload = @json_decode($record->final_payload ?? '', true) ?: $record->final_payload;
+                    $routing = @json_decode($record->routing ?? '', true) ?: $record->routing;
+                    $agents = @json_decode($record->agents_called ?? '', true) ?: $record->agents_called;
+
+                    $results[] = [
+                        'id' => $record->id,
+                        'run_id' => $record->run_id,
+                        'userid' => $record->userid,
+                        'courseid' => $record->courseid,
+                        'module' => $record->module,
+                        'instanceid' => $record->instanceid,
+                        'mode' => $record->mode,
+                        'timecreated' => userdate($record->timecreated),
+                        'input_evidence' => $evidence,
+                        'routing_decisions' => $routing,
+                        'agents_called' => $agents,
+                        'final_payload' => $payload
+                    ];
+                }
+
+                return $results;
+            }
+        ];
     }
 
     public function run()

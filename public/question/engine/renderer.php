@@ -138,61 +138,83 @@ class core_question_renderer extends plugin_renderer_base
 
         if ($hasaudio) {
             $transcript_html = 'Audio detected, but no transcript available.';
+            $containerid = 'transcribe-container-' . uniqid();
 
             if ($audiofile) {
-                // Copy the file from Moodle's virtual file storage to a real temp file
-                $tempdir = make_request_directory();
-                $tempfilepath = $tempdir . '/' . $audiofile->get_filename();
-                $audiofile->copy_content_to($tempfilepath);
-
-                // Run the Python transcription script
                 global $CFG;
-                $script_path = $CFG->dirroot . '/admin/cli/transcribe.py';
-                if (!file_exists($script_path)) {
-                    // If dirroot points to the public/ folder, the script is in the parent directory
-                    $script_path = dirname($CFG->dirroot) . '/admin/cli/transcribe.py';
-                }
-                // Escape arguments to be safe
-                $escaped_script = escapeshellarg($script_path);
-                $escaped_audio = escapeshellarg($tempfilepath);
+                $transcript_html = '
+                    <div class="transcription-loading">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="sr-only">Loading transcript...</span>
+                        </div>
+                        <span class="ml-2">Transcribing audio...</span>
+                    </div>
+                ';
 
-                // Assuming we use gemini as model
-                $command = "python $escaped_script --audio $escaped_audio --model gemini 2>&1";
-                $output_json = shell_exec($command);
+                $output .= '<script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    const formData = new FormData();
+                    formData.append("sesskey", M.cfg.sesskey);
+                    formData.append("contextid", ' . $audiofile->get_contextid() . ');
+                    formData.append("component", "' . addslashes($audiofile->get_component()) . '");
+                    formData.append("filearea", "' . addslashes($audiofile->get_filearea()) . '");
+                    formData.append("itemid", ' . $audiofile->get_itemid() . ');
+                    formData.append("filepath", "' . addslashes($audiofile->get_filepath()) . '");
+                    formData.append("filename", "' . addslashes($audiofile->get_filename()) . '");
 
-                if ($output_json) {
-                    $result = json_decode($output_json, true);
-                    if ($result && isset($result['status']) && $result['status'] === 'success') {
-                        $transcript_html = '<strong>Transcript:</strong><br/>' . nl2br(htmlspecialchars($result['transcript']));
-                    } else if ($result && isset($result['message'])) {
-                        $transcript_html = '<strong>Transcription Error:</strong> ' . htmlspecialchars($result['message']);
-                    } else {
-                        $transcript_html = '<strong>Transcription Error:</strong> Could not parse output.<br/><pre>' . htmlspecialchars($output_json) . '</pre>';
-                    }
-                }
+                    fetch("' . $CFG->wwwroot . '/local/transcribe_ajax.php", {
+                        method: "POST",
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById("' . $containerid . '");
+                        if (!container) return;
+                        
+                        if (data.success) {
+                            container.innerHTML = "<strong>Transcript:</strong><br/>" + (data.transcript || "").replace(/\n/g, "<br/>");
+                        } else {
+                            container.innerHTML = "<strong>Transcription Error:</strong> " + (data.message || "Unknown error");
+                        }
+                    })
+                    .catch(error => {
+                        const container = document.getElementById("' . $containerid . '");
+                        if (container) {
+                            container.innerHTML = "<strong>Transcription Request Failed:</strong> " + error.message;
+                        }
+                    });
+                });
+                </script>';
             } else {
                 $transcript_html = '<em>Audio embedded via HTML tag. Transcription of RecordRTC embeddings requires retrieving the draft file directly.</em>';
             }
 
             $output .= html_writer::tag(
                 'div',
-                html_writer::tag('div', $transcript_html, array('class' => 'alert alert-info mt-3 mb-3')),
+                html_writer::tag('div', $transcript_html, array('class' => 'alert alert-info mt-3 mb-3', 'id' => $containerid)),
                 array('class' => 'custom-injected-section')
             );
         }
 
         // Inject custom AI Diagnosis section via AJAX to prevent slow page load
-        $usageid = $qa->get_usage_id();
-        $slot = $qa->get_slot();
-        $contextid = $options->context->id;
+        $can_diagnose = false;
+        if (isset($options->context)) {
+            $isteacher = has_capability('mod/quiz:grade', $options->context) || has_capability('moodle/grade:edit', $options->context) || has_capability('moodle/course:manageactivities', $options->context);
+            $can_diagnose = $isteacher && $options->readonly;
+        }
 
-        $diag_container_id = 'diag-container-' . $usageid . '-' . $slot;
-        $diag_html = '
-            <div id="' . $diag_container_id . '" class="custom-diagnosis-section mt-3 mb-3">
-                <button type="button" class="btn btn-secondary btn-sm diagnose-btn" onclick="fetchDiagnosis(' . $usageid . ', ' . $slot . ', ' . $contextid . ', \'' . sesskey() . '\', \'' . $diag_container_id . '\')">
-                    Get AI Diagnosis
-                </button>
-            </div>
+        if ($can_diagnose) {
+            $usageid = $qa->get_usage_id();
+            $slot = $qa->get_slot();
+            $contextid = $options->context->id;
+
+            $diag_container_id = 'diag-container-' . $usageid . '-' . $slot;
+            $diag_html = '
+                <div id="' . $diag_container_id . '" class="custom-diagnosis-section mt-3 mb-3">
+                    <button type="button" class="btn btn-secondary btn-sm diagnose-btn" onclick="fetchDiagnosis(' . $usageid . ', ' . $slot . ', ' . $contextid . ', \'' . sesskey() . '\', \'' . $diag_container_id . '\')">
+                        Get AI Diagnosis
+                    </button>
+                </div>
             <script>
             if (typeof fetchDiagnosis !== "function") {
                 function fetchDiagnosis(usageid, slot, contextid, sesskey, containerId) {
@@ -215,7 +237,8 @@ class core_question_renderer extends plugin_renderer_base
             </script>
         ';
 
-        $output .= $diag_html;
+            $output .= $diag_html;
+        }
 
         $output .= html_writer::nonempty_tag(
             'div',

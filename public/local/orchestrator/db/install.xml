@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/orchestrator/db" VERSION="20260307" COMMENT="XMLDB file for Moodle local/orchestrator"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="local_orchestrator_log" COMMENT="Logs output schemas from Orchestrator AI">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="run_id" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="module" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="instanceid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="mode" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="input_evidence" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Full JSON string of the evidence sent to AI"/>
+        <FIELD NAME="input_modalities" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="input_quality" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="request_summary" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="policy" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="routing" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="agents_called" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="final_payload" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="courseid" UNIQUE="false" FIELDS="courseid"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
