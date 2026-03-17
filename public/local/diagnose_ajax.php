@@ -35,7 +35,7 @@ if ($stepdata) {
             foreach ($files as $file) {
                 $mimetype = $file->get_mimetype();
                 $filename = $file->get_filename();
-                if (strpos($mimetype, 'audio/') === 0 || strpos($mimetype, 'image/') === 0 || strpos($mimetype, 'video/') === 0 || preg_match('/\.(mp3|wav|ogg|jpg|jpeg|png|gif|mp4)$/i', $filename)) {
+                if (strpos($mimetype, 'audio/') === 0 || strpos($mimetype, 'image/') === 0 || strpos($mimetype, 'video/') === 0 || preg_match('/\.(mp3|wav|ogg|webm|jpg|jpeg|png|gif|mp4)$/i', $filename)) {
                     $mediafile = $file;
                     break 2;
                 }

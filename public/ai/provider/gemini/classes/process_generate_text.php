@@ -30,10 +30,12 @@ use Psr\Http\Message\UriInterface;
  * @author     Andrea Bertelli <andrea.bertelli@unife.it>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class process_generate_text extends abstract_processor {
+class process_generate_text extends abstract_processor
+{
 
     #[\Override]
-    protected function create_request_object(string $userid): RequestInterface {
+    protected function create_request_object(string $userid): RequestInterface
+    {
         /*
          Google Gemini REST API requires a specific request format.
          Example request body:
@@ -58,12 +60,31 @@ class process_generate_text extends abstract_processor {
         }
         */
 
+        $prompttext = $this->action->get_configuration('prompttext');
+        $parts = [];
+
+        // Extract base64 images and convert them into inlineData parts for Gemini
+        $pattern = '/"data:(image\/[^;]+);base64,([A-Za-z0-9+\/=]+)"/';
+        if (preg_match_all($pattern, $prompttext, $matches)) {
+            $prompttext = preg_replace($pattern, '"[IMAGE ATTACHED AS MULTIPART]"', $prompttext);
+            $parts[] = ['text' => $prompttext];
+
+            for ($i = 0; $i < count($matches[0]); $i++) {
+                $parts[] = [
+                    'inlineData' => [
+                        'mimeType' => $matches[1][$i],
+                        'data' => $matches[2][$i]
+                    ]
+                ];
+            }
+        } else {
+            $parts[] = ['text' => $prompttext];
+        }
+
         // Create the user object.
         $userobj = new \stdClass();
         $userobj->role = 'user';
-        $userobj->parts = [
-            "text" => $this->action->get_configuration('prompttext'),
-        ];
+        $userobj->parts = $parts;
 
         // Create the request object.
         $requestobj = new \stdClass();
@@ -107,7 +128,8 @@ class process_generate_text extends abstract_processor {
      * @param ResponseInterface $response The response object.
      * @return array The response.
      */
-    protected function handle_api_success(ResponseInterface $response): array {
+    protected function handle_api_success(ResponseInterface $response): array
+    {
         $bodystring = (string) $response->getBody();
         $responsebody = json_decode($bodystring);
 

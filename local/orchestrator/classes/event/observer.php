@@ -35,6 +35,9 @@ class observer
         $submission_files = $fs->get_area_files($context->id, 'assignsubmission_file', 'submission_files', $submissionid, 'filename', false);
 
         foreach ($submission_files as $file) {
+            if ($file->is_directory())
+                continue;
+
             $mimetype = $file->get_mimetype();
             $file_info = [
                 'filename' => $file->get_filename(),
@@ -155,15 +158,33 @@ class observer
 
         $memory_data = \local_orchestrator\memory::load_profile($userid, $courseid);
 
+        $task_context = [
+            'courseid' => $courseid,
+            'module' => $module,
+            'instanceid' => $instanceid
+        ];
+
+        // Fetch specific task instructions so the AI knows what problem is being solved
+        if ($module === 'assign') {
+            $assign = $DB->get_record('assign', ['id' => $instanceid]);
+            if ($assign) {
+                $task_context['name'] = $assign->name;
+                $task_context['instructions'] = strip_tags($assign->intro);
+            }
+        } elseif ($module === 'quiz') {
+            $quiz = $DB->get_record('quiz', ['id' => $instanceid]);
+            if ($quiz) {
+                $task_context['name'] = $quiz->name;
+                $task_context['instructions'] = strip_tags($quiz->intro);
+            }
+        }
+
         $evidence = [
             'mode' => 'submit_answer',
             'student_profile' => array_merge($student_profile, $memory_data['student_profile']),
-            'task_context' => [
-                'courseid' => $courseid,
-                'module' => $module,
-                'instanceid' => $instanceid
-            ],
+            'task_context' => $task_context,
             'student_submission' => $student_submission,
+            'input_quality_signals' => ['image' => 'ok', 'text' => 'ok', 'speech' => 'ok'],
             'history' => array_merge($history, $memory_data['history']),
             'resources' => $resources,
             'policies' => []

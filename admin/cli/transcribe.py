@@ -7,7 +7,6 @@ import tempfile
 import urllib.request
 import urllib.parse
 import urllib.error
-import azure.cognitiveservices.speech as speechsdk
 
 def load_env():
     env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.env')
@@ -21,6 +20,7 @@ def load_env():
                     os.environ[k.strip()] = v.strip().strip("'").strip('"')
 
 def transcribe_openai(audio_path, api_key):
+    # Whisper handles multiple formats including webm
     cmd = [
         "curl", "-s",
         "https://api.openai.com/v1/audio/transcriptions",
@@ -78,30 +78,19 @@ def transcribe_azure(audio_path, api_key):
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-def process_with_gemini(transcript, api_key, prompt):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": f"{prompt}\n\nTranscript:\n{transcript}"}
-                ]
-            }
-        ]
-    }
-    
-    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
-    try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            return res_data['candidates'][0]['content']['parts'][0]['text']
-    except Exception as e:
-        raise Exception(f"Gemini API error: {e}")
-
 def transcribe_gemini(audio_path, api_key):
     import base64
+    import mimetypes
+    # Use v1beta for 2.5-flash
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
+    mime_type, _ = mimetypes.guess_type(audio_path)
+    ext = os.path.splitext(audio_path)[1].lower()
+    if ext == '.webm':
+        mime_type = 'audio/webm'
+    elif not mime_type:
+        mime_type = 'audio/mpeg'
+
     with open(audio_path, "rb") as f:
         audio_data = base64.b64encode(f.read()).decode('utf-8')
     
@@ -111,8 +100,8 @@ def transcribe_gemini(audio_path, api_key):
                 "parts": [
                     {"text": "Please transcribe the following audio accurately. Output only the transcript text."},
                     {
-                        "inline_data": {
-                            "mime_type": "audio/mp3",
+                        "inlineData": {
+                            "mimeType": mime_type,
                             "data": audio_data
                         }
                     }
@@ -125,7 +114,23 @@ def transcribe_gemini(audio_path, api_key):
     try:
         with urllib.request.urlopen(req) as response:
             res_data = json.loads(response.read().decode('utf-8'))
-            return res_data['candidates'][0]['content']['parts'][0]['text']
+            
+            transcript = ""
+            if 'candidates' in res_data and res_data['candidates']:
+                content = res_data['candidates'][0].get('content', {})
+                for part in content.get('parts', []):
+                    if 'text' in part:
+                        transcript += part['text']
+            
+            return transcript.strip()
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        try:
+            error_json = json.loads(error_body)
+            error_msg = error_json.get('error', {}).get('message', str(e))
+        except:
+            error_msg = error_body if error_body else str(e)
+        raise Exception(f"Gemini API error ({e.code}): {error_msg}")
     except Exception as e:
         raise Exception(f"Gemini transcription error: {e}")
 
@@ -165,20 +170,16 @@ def main():
             transcript = transcribe_azure(args.audio, azure_api)
         elif args.model == "gemini":
             transcript = transcribe_gemini(args.audio, gemini_api)
+        else:
+            raise Exception("Invalid model selected")
             
         transcribe_time = time.time() - start_time
-            
-        # summary = process_with_gemini(transcript, gemini_api, args.prompt)
-        
-        total_time = time.time() - start_time
         
         print(json.dumps({
             "status": "success",
             "model": args.model,
             "transcript": transcript,
-            # "gemini_response": summary,
             "transcribe_time": transcribe_time,
-            # "total_time": total_time
         }))
         
     except Exception as e:

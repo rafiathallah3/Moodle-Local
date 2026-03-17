@@ -1,0 +1,21 @@
+.audiorecord-wrapper {
+    margin: 10px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f9f9f9;
+}
+.audiorecord-controls {
+    display: flex;
+    align-items: center;
+}
+.audiorecord-controls .timer {
+    font-size: 1.2rem;
+    padding: 8px 12px;
+}
+.audiorecord-preview audio {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    max-width: 400px;
+}

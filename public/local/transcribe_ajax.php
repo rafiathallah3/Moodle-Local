@@ -26,7 +26,7 @@ try {
     }
 
     $mimetype = $file->get_mimetype();
-    if (strpos($mimetype, 'audio/') !== 0 && !preg_match('/\.(mp3|wav|ogg)$/i', $filename)) {
+    if (strpos($mimetype, 'audio/') !== 0 && strpos($mimetype, 'video/webm') !== 0 && !preg_match('/\.(mp3|wav|ogg|webm)$/i', $filename)) {
         throw new Exception('File is not an audio file.');
     }
 
@@ -34,10 +34,11 @@ try {
     $tempfilepath = $tempdir . '/' . $file->get_filename();
     $file->copy_content_to($tempfilepath);
 
-    $script_path = $CFG->dirroot . '/admin/cli/transcribe.py';
-    if (!file_exists($script_path)) {
-        $script_path = dirname($CFG->dirroot) . '/admin/cli/transcribe.py';
+    $base_dir = $CFG->dirroot;
+    if (basename($base_dir) === 'public') {
+        $base_dir = dirname($base_dir);
     }
+    $script_path = $base_dir . '/admin/cli/transcribe.py';
 
     $escaped_script = escapeshellarg($script_path);
     $escaped_audio = escapeshellarg($tempfilepath);

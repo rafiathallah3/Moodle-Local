@@ -1,28 +1,28 @@
-<?php  // Moodle configuration file
+<?php // Moodle configuration file
 
 unset($CFG);
 global $CFG;
 $CFG = new stdClass();
 
-$CFG->dbtype = 'mysqli';
-$CFG->dblibrary = 'native';
-$CFG->dbhost = 'localhost';
-$CFG->dbname = 'moodle';
-$CFG->dbuser = 'moodle';
-$CFG->dbpass = 'moodle';
-$CFG->prefix = 'mdl_';
-$CFG->dboptions = array(
-  'dbpersist' => 0,
-  'dbport' => '',
-  'dbsocket' => '',
-  'dbcollation' => 'utf8mb4_unicode_ci',
-);
+$CFG->dbtype = "mysqli";
+$CFG->dblibrary = "native";
+$CFG->dbhost = "127.0.0.1";
+$CFG->dbname = "moodle";
+$CFG->dbuser = "moodle";
+$CFG->dbpass = "moodle";
+$CFG->prefix = "mdl_";
+$CFG->dboptions = [
+    "dbpersist" => 0,
+    "dbport" => "3306",
+    "dbsocket" => "",
+    "dbcollation" => "utf8mb4_unicode_ci",
+];
 
-$CFG->wwwroot = 'http://moodle.test';
-$CFG->dataroot = 'C:\\wamp64\\www/moodledata';
+$CFG->wwwroot = "https://moodle.test";
+$CFG->dataroot = "C:\\wamp64\\www/moodledata";
 // $CFG->wwwroot = 'http://moodle.test'; // Original value for WAMP
 // $CFG->dataroot = 'C:\\wamp64\\www/moodledata'; // Original value for WAMP
-$CFG->admin = 'admin';
+$CFG->admin = "admin";
 
 $CFG->directorypermissions = 0777;
 
@@ -37,7 +37,7 @@ $CFG->directorypermissions = 0777;
 // define('CURL_SSL_VERIFY_PEER', true);
 // define('CURL_SSL_VERIFY_HOST', 2);
 
-require_once(__DIR__ . '/lib/setup.php');
+require_once __DIR__ . "/lib/setup.php";
 
 // There is no php closing tag in this file,
 // it is intentional because it prevents trailing whitespace problems!
