@@ -366,68 +366,7 @@ class core_question_renderer extends plugin_renderer_base
             </script>';
         }
 
-        // Inject custom AI Diagnosis section via AJAX to prevent slow page load
-        $can_diagnose = false;
-        if (isset($options->context)) {
-            $isteacher =
-                has_capability("mod/quiz:grade", $options->context) ||
-                has_capability("moodle/grade:edit", $options->context) ||
-                has_capability(
-                    "moodle/course:manageactivities",
-                    $options->context,
-                );
-            $can_diagnose = $isteacher && $options->readonly;
-        }
 
-        if ($can_diagnose) {
-            $usageid = $qa->get_usage_id();
-            $slot = $qa->get_slot();
-            $contextid = $options->context->id;
-
-            $diag_container_id = "diag-container-" . $usageid . "-" . $slot;
-            $diag_html =
-                '
-                <div id="' .
-                $diag_container_id .
-                '" class="custom-diagnosis-section mt-3 mb-3">
-                    <button type="button" class="btn btn-secondary btn-sm diagnose-btn" onclick="fetchDiagnosis(' .
-                $usageid .
-                ", " .
-                $slot .
-                ", " .
-                $contextid .
-                ', \'' .
-                sesskey() .
-                '\', \'' .
-                $diag_container_id .
-                '\')">
-                        Get AI Diagnosis
-                    </button>
-                </div>
-            <script>
-            if (typeof fetchDiagnosis !== "function") {
-                function fetchDiagnosis(usageid, slot, contextid, sesskey, containerId) {
-                    var container = document.getElementById(containerId);
-                    container.innerHTML = "<em>Loading AI diagnosis... This may take a few seconds.</em>";
-                    fetch(M.cfg.wwwroot + "/local/diagnose_ajax.php?usageid=" + usageid + "&slot=" + slot + "&contextid=" + contextid + "&sesskey=" + sesskey)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "success") {
-                            // The AJAX endpoint already outputs <br/> and <h2> instead of \n or **
-                            container.innerHTML = "<div class=\"alert alert-success mt-3 mb-3\"><strong>AI Diagnosis:</strong><br/>" + data.diagnosis + "</div>";
-                        } else {
-                            container.innerHTML = "<div class=\"alert alert-warning mt-3 mb-3\"><strong>AI Diagnosis Error:</strong> " + data.message + "</div>";
-                        }
-                    }).catch(err => {
-                        container.innerHTML = "<div class=\"alert alert-danger mt-3 mb-3\">Error fetching diagnosis. Please try again.</div>";
-                    });
-                }
-            }
-            </script>
-        ';
-
-            $output .= $diag_html;
-        }
 
         $output .= html_writer::nonempty_tag(
             "div",

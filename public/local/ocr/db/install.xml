@@ -27,5 +27,28 @@
                COMMENT="Speed up lookups by filename"/>
       </INDEXES>
     </TABLE>
+    <TABLE NAME="local_transcribe_results" COMMENT="Stores AI transcription extracted from audio file submissions">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="contextid"   TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="false" COMMENT="Moodle context ID of the file"/>
+        <FIELD NAME="component"   TYPE="char" LENGTH="100" NOTNULL="true"  SEQUENCE="false" COMMENT="Component that owns the file"/>
+        <FIELD NAME="filearea"    TYPE="char" LENGTH="100" NOTNULL="true"  SEQUENCE="false" COMMENT="File area within the component"/>
+        <FIELD NAME="itemid"      TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="false" COMMENT="Item ID within the file area"/>
+        <FIELD NAME="filepath"    TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" DEFAULT="/" COMMENT="File path within the file area"/>
+        <FIELD NAME="filename"    TYPE="char" LENGTH="255" NOTNULL="true"  SEQUENCE="false" COMMENT="Name of the audio file"/>
+        <FIELD NAME="transcript"  TYPE="text"              NOTNULL="false" SEQUENCE="false" COMMENT="Transcript extracted by AI, or the error message"/>
+        <FIELD NAME="model"       TYPE="char" LENGTH="50"  NOTNULL="false" SEQUENCE="false" COMMENT="AI model used for transcription, e.g. gemini or openai"/>
+        <FIELD NAME="timecreated" TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="false" COMMENT="Unix timestamp when the transcript was created"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="contextid_component_filearea_itemid" UNIQUE="false" FIELDS="contextid, component, filearea, itemid"
+               COMMENT="Speed up lookups when checking the cache for a specific submission"/>
+        <INDEX NAME="filename" UNIQUE="false" FIELDS="filename"
+               COMMENT="Speed up lookups by filename"/>
+      </INDEXES>
+    </TABLE>
   </TABLES>
 </XMLDB>

@@ -27,11 +27,6 @@ def load_env():
 
 
 def make_ssl_context():
-    """
-    Build an SSL context that works reliably on local WAMP/Windows setups.
-    We first try the system default context (proper verification); if that
-    fails at call time the caller can fall back to an unverified context.
-    """
     try:
         ctx = ssl.create_default_context()
         return ctx
@@ -41,25 +36,17 @@ def make_ssl_context():
 
 
 def urlopen_with_fallback(req, timeout=30):
-    """
-    Try to open `req` with SSL verification first.
-    If it fails with an SSL error (common on local WAMP installs that do not
-    have an up-to-date CA bundle), retry with verification disabled.
-    Raises any non-SSL exception immediately.
-    """
     try:
         ctx = ssl.create_default_context()
         return urllib.request.urlopen(req, context=ctx, timeout=timeout)
     except ssl.SSLError:
         pass
     except urllib.error.URLError as e:
-        # Wrap SSL-related URLErrors (e.g. CERTIFICATE_VERIFY_FAILED)
         if "SSL" in str(e) or "CERTIFICATE" in str(e):
             pass
         else:
             raise
 
-    # Retry without certificate verification
     ctx = ssl._create_unverified_context()
     return urllib.request.urlopen(req, context=ctx, timeout=timeout)
 
@@ -134,7 +121,6 @@ def ocr_gemini(image_path, api_key):
             if "candidates" in res_data and res_data["candidates"]:
                 candidate = res_data["candidates"][0]
 
-                # Check finish reason for safety blocks
                 finish_reason = candidate.get("finishReason", "")
                 if finish_reason == "SAFETY":
                     return "Text not found inside the image."
@@ -167,10 +153,6 @@ def ocr_gemini(image_path, api_key):
 
 
 def ocr_openai(image_path, api_key):
-    """
-    Extract text from an image using OpenAI GPT-4o vision.
-    Returns the extracted text string, or the fallback message if no text found.
-    """
     import subprocess
 
     mime_type = get_image_mimetype(image_path)

@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026031001;      // The current plugin version (YYYYMMDDXX).
+$plugin->version   = 2026031002;      // The current plugin version (YYYYMMDDXX).
 $plugin->requires  = 2022112800;      // Requires Moodle 4.1 or later.
 $plugin->component = 'local_ocr';     // Full name of the plugin (used for diagnostics).
 $plugin->maturity  = MATURITY_STABLE;

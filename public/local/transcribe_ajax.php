@@ -13,7 +13,7 @@ $itemid = required_param('itemid', PARAM_INT);
 $filepath = required_param('filepath', PARAM_PATH);
 $filename = required_param('filename', PARAM_FILE);
 
-global $USER, $CFG;
+global $USER, $CFG, $DB;
 
 header('Content-Type: application/json');
 
@@ -28,6 +28,25 @@ try {
     $mimetype = $file->get_mimetype();
     if (strpos($mimetype, 'audio/') !== 0 && strpos($mimetype, 'video/webm') !== 0 && !preg_match('/\.(mp3|wav|ogg|webm)$/i', $filename)) {
         throw new Exception('File is not an audio file.');
+    }
+
+    $cached = null;
+    try {
+        $cached = $DB->get_record('local_transcribe_results', [
+            'contextid' => $contextid,
+            'component' => $component,
+            'filearea' => $filearea,
+            'itemid' => $itemid,
+            'filepath' => $filepath,
+            'filename' => $filename,
+        ]);
+    } catch (Throwable $dbe) {
+        // Table does not exist yet.
+    }
+
+    if ($cached) {
+        echo json_encode(['success' => true, 'transcript' => $cached->transcript, 'cached' => true]);
+        exit();
     }
 
     $tempdir = make_request_directory();
@@ -49,7 +68,26 @@ try {
     if ($output_json) {
         $result = json_decode($output_json, true);
         if ($result && isset($result['status']) && $result['status'] === 'success') {
-            echo json_encode(['success' => true, 'transcript' => $result['transcript']]);
+            $transcript = $result['transcript'];
+            
+            try {
+                $record = new stdClass();
+                $record->contextid = $contextid;
+                $record->component = $component;
+                $record->filearea = $filearea;
+                $record->itemid = $itemid;
+                $record->filepath = $filepath;
+                $record->filename = $filename;
+                $record->transcript = $transcript;
+                $record->model = 'gemini';
+                $record->timecreated = time();
+
+                $DB->insert_record('local_transcribe_results', $record);
+            } catch (Throwable $dbe) {
+                // Ignore caching errors.
+            }
+
+            echo json_encode(['success' => true, 'transcript' => $transcript, 'cached' => false]);
         } else if ($result && isset($result['message'])) {
             echo json_encode(['success' => false, 'message' => $result['message'], 'debug' => $output_json]);
         } else {

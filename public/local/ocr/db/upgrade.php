@@ -29,16 +29,30 @@ function xmldb_local_ocr_upgrade($oldversion) {
 
     $dbman = $DB->get_manager();
 
-    // Future upgrade steps go here.
-    // Example:
-    // if ($oldversion < 2026031002) {
-    //     $table = new xmldb_table('local_ocr_results');
-    //     $field = new xmldb_field('newfield', XMLDB_TYPE_TEXT, null, null, null, null, null, 'ocr_text');
-    //     if (!$dbman->field_exists($table, $field)) {
-    //         $dbman->add_field($table, $field);
-    //     }
-    //     upgrade_plugin_savepoint(true, 2026031002, 'local', 'ocr');
-    // }
+    if ($oldversion < 2026031002) {
+        $table = new xmldb_table('local_transcribe_results');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('contextid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('component', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('filearea', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('itemid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('filepath', XMLDB_TYPE_CHAR, '255', null, null, null, '/');
+        $table->add_field('filename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('transcript', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('model', XMLDB_TYPE_CHAR, '50', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('contextid_component_filearea_itemid', XMLDB_INDEX_NOTUNIQUE, ['contextid', 'component', 'filearea', 'itemid']);
+        $table->add_index('filename', XMLDB_INDEX_NOTUNIQUE, ['filename']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        upgrade_plugin_savepoint(true, 2026031002, 'local', 'ocr');
+    }
 
     return true;
 }

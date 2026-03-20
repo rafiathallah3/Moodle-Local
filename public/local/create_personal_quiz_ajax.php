@@ -153,14 +153,36 @@ try {
     }
 
     // 4. Find a matching category by name from a qbank activity module (Required in Moodle 4.3+)
-    $catsql = "SELECT qc.id, qc.name 
+    require_once($CFG->dirroot . '/course/lib.php');
+    $sectionname = !empty($section->name) ? $section->name : get_section_name($course, $section);
+    
+    $catsql_base = "SELECT qc.id, qc.name 
                  FROM {qbank} m
                  JOIN {course_modules} cm ON m.id = cm.instance
                  JOIN {modules} mods ON cm.module = mods.id AND mods.name = 'qbank'
                  JOIN {context} ctx ON cm.id = ctx.instanceid AND ctx.contextlevel = 70
                  JOIN {question_categories} qc ON qc.contextid = ctx.id AND qc.name != 'top'
-                WHERE m.course = ? AND m.name LIKE ?";
-    $category = $DB->get_record_sql($catsql, [$course->id, '%' . $difficulty . '%'], IGNORE_MULTIPLE);
+                WHERE m.course = ?";
+
+    $category = null;
+
+    if (!empty($sectionname)) {
+        // Try to find a qbank matching BOTH section name and difficulty
+        $catsql_both = $catsql_base . " AND m.name LIKE ? AND m.name LIKE ?";
+        $category = $DB->get_record_sql($catsql_both, [$course->id, '%' . $sectionname . '%', '%' . $difficulty . '%'], IGNORE_MULTIPLE);
+
+        if (!$category) {
+            // Fallback to just section name
+            $catsql_sec = $catsql_base . " AND m.name LIKE ?";
+            $category = $DB->get_record_sql($catsql_sec, [$course->id, '%' . $sectionname . '%'], IGNORE_MULTIPLE);
+        }
+    }
+
+    if (!$category) {
+        // Fallback to just difficulty, as before
+        $catsql_diff = $catsql_base . " AND m.name LIKE ?";
+        $category = $DB->get_record_sql($catsql_diff, [$course->id, '%' . $difficulty . '%'], IGNORE_MULTIPLE);
+    }
 
     if ($category) {
         // Elevate back to Admin just in case to add questions without capability issues
@@ -180,11 +202,11 @@ try {
                             ]
                         ]
                     ];
-                    $structure->add_random_questions(1, 5, $filtercondition);
+                    $structure->add_random_questions(1, 1, $filtercondition);
                 }
             } else if (function_exists('quiz_add_random_questions')) {
                 // Fallback for older Moodle versions
-                quiz_add_random_questions($DB->get_record('quiz', ['id' => $result->instance]), 1, $category->id, 5);
+                quiz_add_random_questions($DB->get_record('quiz', ['id' => $result->instance]), 1, $category->id, 1);
             }
 
             // Recompute the sumgrades since we added questions

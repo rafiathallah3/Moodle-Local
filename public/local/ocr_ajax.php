@@ -216,6 +216,7 @@ try {
             "component" => $component,
             "filearea" => $filearea,
             "itemid" => $itemid,
+            "filepath" => $filepath,
             "filename" => $filename,
         ]);
     } catch (Throwable $dbe) {
