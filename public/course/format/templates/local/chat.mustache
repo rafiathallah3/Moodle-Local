@@ -1,18 +1,31 @@
 <div class="floating-chat-container">
-    <button id="chat-btn-{{uniqid}}" class="chat-btn-floating" aria-label="Open chat">
+    <button id="chat-btn-{{uniqid}}" class="chat-btn-floating" aria-label="Open AI assistant">
         <i class="fa fa-comments"></i>
     </button>
     <div id="chat-view-{{uniqid}}" class="chat-view-custom">
         <div class="chat-header-custom">
-            <span>Section Chat</span>
+            <div class="chat-header-info">
+                <span class="chat-header-icon"><i class="fa fa-robot"></i></span>
+                <div>
+                    <span class="chat-header-title">MoodleBot</span>
+                    <span class="chat-header-subtitle">AI Assistant</span>
+                </div>
+            </div>
             <button id="chat-close-{{uniqid}}" class="chat-close-custom" aria-label="Close chat">&times;</button>
         </div>
         <div class="chat-content-custom">
             <div id="chat-messages-{{uniqid}}" class="chat-messages">
-                <div class="message system">Welcome to the section chat! I'm powered by Gemini AI. How can I help you?</div>
+                <div class="message system">
+                    <strong>Hello!</strong> I'm your AI assistant for this course. Try asking me:
+                </div>
+                <div class="chat-chips" id="chat-chips-{{uniqid}}">
+                    <button class="chip" data-prompt="What is this course about?"><i class="fa fa-info-circle"></i> About this course</button>
+                    <button class="chip" data-prompt="What assignments do I have?"><i class="fa fa-tasks"></i> My assignments</button>
+                    <button class="chip" data-prompt="Create a practice quiz for me"><i class="fa fa-pencil-square-o"></i> Practice quiz</button>
+                </div>
             </div>
             <div class="chat-input-area">
-                <textarea id="chat-input-{{uniqid}}" class="chat-input" placeholder="Ask me anything..."></textarea>
+                <textarea id="chat-input-{{uniqid}}" class="chat-input" placeholder="Ask me anything..." rows="1"></textarea>
                 <button id="chat-send-{{uniqid}}" class="chat-send-btn" aria-label="Send message">
                     <i class="fa fa-paper-plane"></i>
                 </button>
@@ -22,18 +35,40 @@
 </div>
 
 <style>
+/* ── Chat Button ─────────────────────────────────────────────────────────── */
+.chat-btn-floating {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: #0ea5e9;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1049;
+}
+
+/* ── Chat Window ─────────────────────────────────────────────────────────── */
 #chat-view-{{uniqid}} {
     position: fixed;
     bottom: 0;
     right: 30px;
-    width: 350px;
+    width: 380px;
     max-width: 90vw;
-    height: 500px;
-    background: #fff;
-    border-radius: 15px 15px 0 0;
-    box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
+    height: 540px;
+    max-height: 80vh;
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
     z-index: 1050;
-    transform: translateY(100%);
+    transform: translateY(110%);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
@@ -44,163 +79,293 @@
     transform: translateY(0);
 }
 
-.chat-btn-floating {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    transition: all 0.3s ease;
-    z-index: 1049;
-}
-
-.chat-btn-floating:hover {
-    transform: scale(1.1);
-    background: #0056b3;
-}
-
+/* ── Header ──────────────────────────────────────────────────────────────── */
 .chat-header-custom {
-    background: #f8f9fa;
-    padding: 15px 20px;
+    background: #0ea5e9;
+    padding: 14px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #eee;
-    font-weight: 600;
+    color: white;
+    min-height: 60px;
 }
 
-.chat-close-custom {
-    background: #e9ecef;
-    border: none;
-    width: 28px;
-    height: 28px;
+.chat-header-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chat-header-icon {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
-    color: #495057;
+}
+
+.chat-header-title {
+    display: block;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+}
+
+.chat-header-subtitle {
+    display: block;
+    font-size: 11px;
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+.chat-close-custom {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: white;
     transition: background 0.2s;
+    line-height: 1;
 }
 
 .chat-close-custom:hover {
-    background: #dee2e6;
+    background: rgba(255, 255, 255, 0.35);
 }
 
+/* ── Content ─────────────────────────────────────────────────────────────── */
 .chat-content-custom {
     flex: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: #f8f9fb;
 }
 
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 15px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    scroll-behavior: smooth;
 }
 
+/* ── Messages ────────────────────────────────────────────────────────────── */
 .message {
-    max-width: 80%;
-    padding: 10px 15px;
-    border-radius: 15px;
-    font-size: 14px;
-    line-height: 1.4;
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13.5px;
+    line-height: 1.55;
     word-wrap: break-word;
+    animation: msgFadeIn 0.3s ease-out;
+}
+
+@keyframes msgFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .message.system {
     align-self: center;
-    background: #f1f3f5;
-    color: #6c757d;
+    background: #eef0f5;
+    color: #555;
     font-size: 13px;
     text-align: center;
-    border-radius: 10px;
+    border-radius: 12px;
+    max-width: 92%;
+    padding: 12px 16px;
 }
 
 .message.user {
     align-self: flex-end;
-    background: #007bff;
+    background: #0ea5e9;
     color: white;
-    border-bottom-right-radius: 2px;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
 }
 
 .message.ai {
     align-self: flex-start;
-    background: #e9ecef;
-    color: #343a40;
-    border-bottom-left-radius: 2px;
+    background: #fff;
+    color: #2d3748;
+    border: 1px solid #e8eaef;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.message.ai strong {
+    color: #0284c7;
+}
+
+.message.ai ul,
+.message.ai ol {
+    margin: 6px 0 2px 0;
+    padding-left: 18px;
+}
+
+.message.ai li {
+    margin-bottom: 3px;
 }
 
 .message.error {
     align-self: center;
-    background: #ffe3e3;
-    color: #e03131;
-    border: 1px solid #fcc2c3;
+    background: #fff5f5;
+    color: #c53030;
+    border: 1px solid #fed7d7;
+    font-size: 13px;
 }
 
-.chat-input-area {
-    padding: 15px;
-    border-top: 1px solid #eee;
+.message.tool-result {
+    align-self: center;
+    background: #f0fff4;
+    color: #276749;
+    border: 1px solid #c6f6d5;
+    border-radius: 12px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.message.tool-result.tool-error {
+    background: #fffaf0;
+    color: #c05621;
+    border-color: #feebc8;
+}
+
+/* ── Typing indicator ────────────────────────────────────────────────────── */
+.typing-indicator {
+    align-self: flex-start;
+    background: #fff;
+    border: 1px solid #e8eaef;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    padding: 12px 18px;
     display: flex;
-    gap: 10px;
+    gap: 5px;
+    align-items: center;
+}
+
+.typing-indicator span {
+    width: 7px;
+    height: 7px;
+    background: #a0aec0;
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.16s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Suggestion Chips ────────────────────────────────────────────────────── */
+.chat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+    justify-content: center;
+}
+
+.chip {
+    background: #fff;
+    border: 1px solid #d8dae5;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: #0ea5e9;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.chip:hover {
+    background: #0ea5e9;
+    color: white;
+    border-color: #0ea5e9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+}
+
+.chip i {
+    font-size: 11px;
+}
+
+/* ── Input Area ──────────────────────────────────────────────────────────── */
+.chat-input-area {
+    padding: 12px 14px;
+    border-top: 1px solid #edf0f4;
+    display: flex;
+    gap: 8px;
     background: #fff;
     align-items: flex-end;
 }
 
 .chat-input {
     flex: 1;
-    border: 1px solid #dee2e6;
-    border-radius: 20px;
-    padding: 10px 15px;
+    border: 1px solid #dde1e8;
+    border-radius: 22px;
+    padding: 10px 16px;
     resize: none;
-    height: 44px;
+    height: 42px;
     max-height: 100px;
     outline: none;
     font-family: inherit;
+    font-size: 13.5px;
     line-height: 20px;
+    background: #f8f9fb;
+    transition: border-color 0.2s, background 0.2s;
 }
 
 .chat-input:focus {
-    border-color: #007bff;
+    border-color: #0ea5e9;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.08);
 }
 
 .chat-send-btn {
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    background: #007bff;
+    background: #0ea5e9;
     color: white;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
-    font-size: 16px;
+    transition: all 0.2s;
+    font-size: 15px;
+    flex-shrink: 0;
 }
 
 .chat-send-btn:hover {
-    background: #0056b3;
+    transform: scale(1.08);
+    box-shadow: 0 3px 12px rgba(14, 165, 233, 0.35);
 }
 
 .chat-send-btn:disabled {
-    background: #ccc;
+    background: #cbd5e0;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 </style>
 
@@ -209,59 +374,124 @@ require(['jquery', 'core/config'], function($, Config) {
     var btn = $('#chat-btn-{{uniqid}}');
     var view = $('#chat-view-{{uniqid}}');
     var close = $('#chat-close-{{uniqid}}');
+    var messages = $('#chat-messages-{{uniqid}}');
+    var input = $('#chat-input-{{uniqid}}');
+    var sendBtn = $('#chat-send-{{uniqid}}');
+    var chips = $('#chat-chips-{{uniqid}}');
+
+    // Course ID from Moodle page config
+    var courseId = (Config.courseId || 0);
 
     btn.on('click', function() {
         $('.chat-view-custom').removeClass('show');
         view.addClass('show');
+        input.focus();
     });
 
     close.on('click', function() {
         view.removeClass('show');
     });
 
-    // AI Chat Logic
-    var messages = $('#chat-messages-{{uniqid}}');
-    var input = $('#chat-input-{{uniqid}}');
-    var sendBtn = $('#chat-send-{{uniqid}}');
+    // ── Markdown-lite renderer ──────────────────────────────────────────
+    function renderMarkdown(text) {
+        // Sanitize HTML first
+        var safe = $('<div>').text(text).html();
 
+        // Bold: **text**
+        safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Italic: *text*
+        safe = safe.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+
+        // Inline code: `code`
+        safe = safe.replace(/`([^`]+)`/g, '<code style="background:#edf2f7;padding:1px 5px;border-radius:3px;font-size:12px;">$1</code>');
+
+        // Bullet lists: lines starting with - or *
+        safe = safe.replace(/^[\-\*]\s+(.+)/gm, '<li>$1</li>');
+        safe = safe.replace(/(<li>.*<\/li>)/gs, '<ul style="margin:6px 0 2px;padding-left:18px;">$1</ul>');
+
+        // Numbered lists: lines starting with 1. 2. etc.
+        safe = safe.replace(/^\d+\.\s+(.+)/gm, '<li>$1</li>');
+
+        // Newlines to <br>
+        safe = safe.replace(/\n/g, '<br>');
+
+        // Clean up double <br> before lists
+        safe = safe.replace(/<br><ul/g, '<ul');
+        safe = safe.replace(/<br><li/g, '<li');
+
+        return safe;
+    }
+
+    // ── Message Functions ───────────────────────────────────────────────
     function appendMessage(text, type) {
-        var msgDiv = $('<div class="message ' + type + '"></div>').text(text);
+        var msgDiv;
+        if (type === 'ai') {
+            msgDiv = $('<div class="message ai"></div>').html(renderMarkdown(text));
+        } else if (type === 'tool-result' || type === 'tool-error') {
+            msgDiv = $('<div class="message tool-result"></div>');
+            if (type === 'tool-error') msgDiv.addClass('tool-error');
+            msgDiv.html('<i class="fa fa-' + (type === 'tool-error' ? 'exclamation-triangle' : 'check-circle') + '"></i> ' + text);
+        } else {
+            msgDiv = $('<div class="message ' + type + '"></div>').text(text);
+        }
         messages.append(msgDiv);
         messages.animate({ scrollTop: messages[0].scrollHeight }, 200);
     }
 
-    function sendMessage() {
-        var text = input.val().trim();
+    function showTyping() {
+        var el = $('<div class="typing-indicator" id="chat-typing-{{uniqid}}"><span></span><span></span><span></span></div>');
+        messages.append(el);
+        messages.animate({ scrollTop: messages[0].scrollHeight }, 200);
+    }
+
+    function hideTyping() {
+        $('#chat-typing-{{uniqid}}').remove();
+    }
+
+    // ── Send Message ────────────────────────────────────────────────────
+    function sendMessage(text) {
+        text = (text || input.val() || '').trim();
         if (!text) return;
+
+        // Hide chips after first interaction
+        chips.slideUp(200);
 
         appendMessage(text, 'user');
         input.val('');
-        
         input.prop('disabled', true);
         sendBtn.prop('disabled', true);
-        
-        var loadingId = 'loading-' + Date.now();
-        messages.append('<div id="' + loadingId + '" class="message system">Thinking...</div>');
-        messages.animate({ scrollTop: messages[0].scrollHeight }, 200);
+
+        showTyping();
 
         $.ajax({
             url: Config.wwwroot + '/local/chat_ai_ajax.php',
             method: 'POST',
             data: {
                 prompt: text,
+                courseid: courseId,
                 sesskey: Config.sesskey
             },
             dataType: 'json',
             success: function(response) {
-                $('#' + loadingId).remove();
+                hideTyping();
                 if (response.success) {
                     appendMessage(response.message, 'ai');
+
+                    // Handle tool results
+                    if (response.tool_result) {
+                        if (response.tool_result.success) {
+                            appendMessage(response.tool_result.message, 'tool-result');
+                        } else {
+                            appendMessage(response.tool_result.message, 'tool-error');
+                        }
+                    }
                 } else {
-                    appendMessage('Error: ' + response.message, 'error');
+                    appendMessage('Error: ' + (response.message || 'Unknown error'), 'error');
                 }
             },
             error: function(xhr, status, error) {
-                $('#' + loadingId).remove();
+                hideTyping();
                 console.error("AI Chat Error:", error);
                 appendMessage('Connection error. Please try again.', 'error');
             },
@@ -273,12 +503,27 @@ require(['jquery', 'core/config'], function($, Config) {
         });
     }
 
-    sendBtn.on('click', sendMessage);
+    // ── Event Handlers ──────────────────────────────────────────────────
+    sendBtn.on('click', function() { sendMessage(); });
 
     input.on('keypress', function(e) {
         if (e.which == 13 && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
+        }
+    });
+
+    // Auto-resize textarea
+    input.on('input', function() {
+        this.style.height = '42px';
+        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    // Chip click handlers
+    chips.on('click', '.chip', function() {
+        var prompt = $(this).data('prompt');
+        if (prompt) {
+            sendMessage(prompt);
         }
     });
 });

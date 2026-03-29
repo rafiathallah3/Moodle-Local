@@ -4,9 +4,10 @@ import json
 import mimetypes
 import os
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
+
+from pydantic import BaseModel, Field
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import SystemMessage, HumanMessage
 
 
 def load_env():
@@ -25,33 +26,42 @@ def load_env():
                     os.environ[k.strip()] = v.strip().strip("'").strip('"')
 
 
-def diagnose_gemini(text, media_path, question_text, max_mark, api_key):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+class DiagnosisOutput(BaseModel):
+    mark: float = Field(description="The score determined for the student's answer out of the maximum mark.")
+    diagnosis: str = Field(description="A short summary and a light diagnosis/feedback of the student's answer.")
 
-    parts = []
+
+def diagnose_gemini(text, media_path, question_text, max_mark, api_key):
+    # Initialize the LLM with LangChain
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash", 
+        google_api_key=api_key
+    )
+    
+    # Force structured output returning our Pydantic model
+    structured_llm = llm.with_structured_output(DiagnosisOutput)
 
     instruction = (
         "You are an AI assistant tasked with evaluating a student's answer.\n"
         "Please provide a short summary and a light diagnosis/feedback of the student's answer. "
         "Keep it concise, helpful, and constructive.\n"
-        f"You must also determine a score for the student's answer out of a maximum of {max_mark}.\n"
-        "IMPORTANT: Your response MUST be valid JSON in the exact following format:\n"
-        "```json\n"
-        "{\n"
-        '  "mark": <float>,\n'
-        '  "diagnosis": "<string>"\n'
-        "}\n"
-        "```\n"
-        "Do not include any text outside of the JSON block."
+        f"You must determine a score for the student's answer out of a maximum of {max_mark}.\n"
     )
     
     if question_text:
         instruction += f"\n\nQuestion/Assignment Description:\n{question_text}"
 
+    messages = [
+        SystemMessage(content=instruction)
+    ]
+    
+    human_content = []
+    
     if text:
-        instruction += f"\n\nStudent Text Answer:\n{text}"
-
-    parts.append({"text": instruction})
+        human_content.append({"type": "text", "text": f"Student Text Answer:\n{text}"})
+        
+    if not text and not media_path:
+         human_content.append({"type": "text", "text": "No answer provided."})
 
     if media_path and os.path.exists(media_path):
         size = os.path.getsize(media_path)
@@ -73,65 +83,37 @@ def diagnose_gemini(text, media_path, question_text, max_mark, api_key):
 
         with open(media_path, "rb") as f:
             media_data = base64.b64encode(f.read()).decode("utf-8")
+            
+        if mime_type.startswith("image/"):
+            human_content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{media_data}"}
+            })
+        else:
+            human_content.append({
+                "type": "media",
+                "mime_type": mime_type,
+                "data": media_data
+            })
+            if not text:
+               human_content.append({"type": "text", "text": "Please transcribe and evaluate this audio/video directly."})
 
-        parts.append({"inlineData": {"mimeType": mime_type, "data": media_data}})
+    if human_content:
+        messages.append(HumanMessage(content=human_content))
 
-    payload = {"contents": [{"role": "user", "parts": parts}]}
-
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-    )
     try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-
-            diagnosis = ""
-            if "candidates" in res_data and res_data["candidates"]:
-                candidate = res_data["candidates"][0]
-                content = candidate.get("content", {})
-                for part in content.get("parts", []):
-                    if "text" in part:
-                        diagnosis += part["text"]
-
-                if not diagnosis:
-                    if candidate.get("finishReason") == "SAFETY":
-                        return {"mark": 0.0, "diagnosis": "The AI response was blocked due to safety filters."}
-                    if "thought" in content.get("parts", [{}])[0]:
-                        return {"mark": 0.0, "diagnosis": "The AI started thinking but didn't provide a final answer."}
-
-            if not diagnosis:
-                return {"mark": 0.0, "diagnosis": "No text response received from AI. This can happen if the audio was unclear or safety filters were triggered."}
-
-            diagnosis = diagnosis.strip()
-            if diagnosis.startswith("```json"):
-                diagnosis = diagnosis[7:]
-            if diagnosis.startswith("```"):
-                diagnosis = diagnosis[3:]
-            if diagnosis.endswith("```"):
-                diagnosis = diagnosis[:-3]
-            diagnosis = diagnosis.strip()
-
-            try:
-                result_json = json.loads(diagnosis)
-                return {
-                    "mark": float(result_json.get("mark", 0.0)),
-                    "diagnosis": result_json.get("diagnosis", diagnosis)
-                }
-            except Exception as e:
-                return {"mark": 0.0, "diagnosis": diagnosis}
-
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8")
-        try:
-            error_json = json.loads(error_body)
-            error_msg = error_json.get("error", {}).get("message", str(e))
-        except:
-            error_msg = error_body if error_body else str(e)
-        raise Exception(f"Gemini API error ({e.code}): {error_msg}")
+        response = structured_llm.invoke(messages)
+        
+        return {
+            "mark": float(response.mark),
+            "diagnosis": response.diagnosis
+        }
+        
     except Exception as e:
-        raise Exception(f"Gemini API error: {e}")
+        error_msg = str(e)
+        if "SAFETY" in error_msg.upper():
+            return {"mark": 0.0, "diagnosis": "The AI response was blocked due to safety filters."}
+        raise Exception(f"LangChain Gemini API error: {error_msg}")
 
 
 def main():

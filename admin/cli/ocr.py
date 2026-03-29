@@ -74,82 +74,56 @@ def ocr_gemini(image_path, api_key):
     Extract text from an image using Gemini 2.5 Flash vision.
     Returns the extracted text string, or the fallback message if no text found.
     """
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:generateContent?key={api_key}"
-    )
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import SystemMessage, HumanMessage
 
     mime_type = get_image_mimetype(image_path)
 
     with open(image_path, "rb") as f:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": (
-                            "You are an OCR engine. Your only task is to extract every piece "
-                            "of text that is visible in the provided image. "
-                            "Output the extracted text exactly as it appears, preserving "
-                            "line breaks and spacing where possible. "
-                            "Do NOT add any commentary, explanation, or formatting. "
-                            "If the image contains absolutely no readable text, respond with "
-                            "exactly the following sentence and nothing else: "
-                            "Text not found inside the image."
-                        )
-                    },
-                    {"inlineData": {"mimeType": mime_type, "data": image_data}},
-                ]
-            }
-        ],
-        "generationConfig": {"temperature": 0, "maxOutputTokens": 4096},
-    }
-
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        google_api_key=api_key,
+        temperature=0,
+        max_output_tokens=4096
     )
 
+    instruction = (
+        "You are an OCR engine. Your only task is to extract every piece "
+        "of text that is visible in the provided image. "
+        "Output the extracted text exactly as it appears, preserving "
+        "line breaks and spacing where possible. "
+        "Do NOT add any commentary, explanation, or formatting. "
+        "If the image contains absolutely no readable text, respond with "
+        "exactly the following sentence and nothing else: "
+        "Text not found inside the image."
+    )
+
+    messages = [
+        SystemMessage(content=instruction),
+        HumanMessage(content=[
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{image_data}"}
+            }
+        ])
+    ]
+
     try:
-        with urlopen_with_fallback(req, timeout=30) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
+        response = llm.invoke(messages)
+        extracted_text = response.content.strip() if response.content else ""
+        
+        if not extracted_text:
+            return "Text not found inside the image."
+            
+        return extracted_text
 
-            extracted_text = ""
-            if "candidates" in res_data and res_data["candidates"]:
-                candidate = res_data["candidates"][0]
-
-                finish_reason = candidate.get("finishReason", "")
-                if finish_reason == "SAFETY":
-                    return "Text not found inside the image."
-
-                content = candidate.get("content", {})
-                for part in content.get("parts", []):
-                    if "text" in part:
-                        extracted_text += part["text"]
-
-            extracted_text = extracted_text.strip()
-            if not extracted_text:
-                return "Text not found inside the image."
-
-            return extracted_text
-
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8")
-        try:
-            error_json = json.loads(error_body)
-            error_msg = error_json.get("error", {}).get("message", str(e))
-        except Exception:
-            error_msg = error_body if error_body else str(e)
-        raise Exception(f"Gemini API error ({e.code}): {error_msg}")
-    except urllib.error.URLError as e:
-        raise Exception(f"Gemini network error: {e.reason}")
-    except TimeoutError:
-        raise Exception("Gemini API timed out after 30 seconds.")
     except Exception as e:
-        raise Exception(f"Gemini OCR error: {e}")
+        error_msg = str(e)
+        if "SAFETY" in error_msg.upper():
+            return "Text not found inside the image."
+        raise Exception(f"LangChain Gemini OCR error: {error_msg}")
 
 
 def ocr_openai(image_path, api_key):

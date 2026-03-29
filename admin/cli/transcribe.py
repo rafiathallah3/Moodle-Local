@@ -81,8 +81,8 @@ def transcribe_azure(audio_path, api_key):
 def transcribe_gemini(audio_path, api_key):
     import base64
     import mimetypes
-    # Use v1beta for 2.5-flash
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage
     
     mime_type, _ = mimetypes.guess_type(audio_path)
     ext = os.path.splitext(audio_path)[1].lower()
@@ -93,46 +93,31 @@ def transcribe_gemini(audio_path, api_key):
 
     with open(audio_path, "rb") as f:
         audio_data = base64.b64encode(f.read()).decode('utf-8')
-    
-    payload = {
-        "contents": [
+
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        google_api_key=api_key,
+        temperature=0
+    )
+
+    messages = [
+        HumanMessage(content=[
+            {"type": "text", "text": "Please transcribe the following audio accurately. Output only the transcript text."},
             {
-                "parts": [
-                    {"text": "Please transcribe the following audio accurately. Output only the transcript text."},
-                    {
-                        "inlineData": {
-                            "mimeType": mime_type,
-                            "data": audio_data
-                        }
-                    }
-                ]
+                "type": "media",
+                "mime_type": mime_type,
+                "data": audio_data
             }
-        ]
-    }
-    
-    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        ])
+    ]
+
     try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            
-            transcript = ""
-            if 'candidates' in res_data and res_data['candidates']:
-                content = res_data['candidates'][0].get('content', {})
-                for part in content.get('parts', []):
-                    if 'text' in part:
-                        transcript += part['text']
-            
-            return transcript.strip()
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode('utf-8')
-        try:
-            error_json = json.loads(error_body)
-            error_msg = error_json.get('error', {}).get('message', str(e))
-        except:
-            error_msg = error_body if error_body else str(e)
-        raise Exception(f"Gemini API error ({e.code}): {error_msg}")
+        response = llm.invoke(messages)
+        transcript = response.content.strip() if response.content else ""
+        return transcript
     except Exception as e:
-        raise Exception(f"Gemini transcription error: {e}")
+        error_msg = str(e)
+        raise Exception(f"LangChain Gemini transcription error: {error_msg}")
 
 def main():
     parser = argparse.ArgumentParser(description="Transcribe audio using AI models")
