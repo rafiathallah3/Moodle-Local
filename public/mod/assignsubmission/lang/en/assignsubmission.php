@@ -94,3 +94,17 @@ $string['editdescription'] = 'Edit Description';
 $string['editdescription_title'] = 'Edit Assignment Description';
 $string['editdescription_help'] = 'This description is used as context by the AI grader when evaluating student submissions. For example, specify the expected input/output format, rubric criteria, or specific requirements.';
 $string['descriptionsaved'] = 'Description saved successfully.';
+
+// Student Mapping CSV
+$string['viewmapping'] = 'View Student Mapping';
+$string['viewmapping_title'] = 'Course Student Mapping';
+$string['nomappings'] = 'No student mappings found for this course. Please upload a mapping CSV.';
+$string['studentid'] = 'Student ID';
+$string['close'] = 'Close';
+$string['uploadmapping'] = 'Upload New CSV';
+$string['mapping_title'] = 'Upload Course Student Mapping (CSV)';
+$string['mapping_help'] = 'Upload a CSV file (semicolon separated) containing student IDs and names. This mapping will apply to ALL Assignment Submission activities in this course. It is used to quickly identify students from uploaded image filenames (e.g., if the filename contains "1030...").';
+$string['csv_file'] = 'CSV File (.csv)';
+$string['upload'] = 'Upload';
+$string['mappinguploaded'] = 'Successfully uploaded {$a} student mappings.';
+$string['uploading'] = 'Uploading...';

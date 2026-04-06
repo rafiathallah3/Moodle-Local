@@ -26,6 +26,12 @@ $CFG->admin = "admin";
 
 $CFG->directorypermissions = 0777;
 
+$CFG->cachejs = true;
+$CFG->cachetemplates = true;
+$CFG->langstringcache = true;
+$CFG->perfdebug = 15;
+$CFG->themedesignermode = false;
+
 // The following lines were WAMP-specific cURL fixes and are being removed to restore core config.
 // // Fix for Local WAMP cURL failing to securely connect to Gemini APIs over PHP
 // $CFG->proxybypass = true;

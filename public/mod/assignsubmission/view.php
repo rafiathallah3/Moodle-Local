@@ -84,6 +84,12 @@ foreach ($submissions as $sub) {
 $can_upload = has_capability('mod/assignsubmission:upload', $context);
 $can_grade = has_capability('mod/assignsubmission:grade', $context);
 
+// Fetch course level mappings if grader
+$course_mappings = array();
+if ($can_grade) {
+    $course_mappings = $DB->get_records('assignsubmission_mapping', array('course' => $course->id), 'studentid ASC');
+}
+
 echo $OUTPUT->header();
 ?>
 
@@ -99,9 +105,17 @@ echo $OUTPUT->header();
                     <p class="text-muted mb-1 font-italic" id="description-text"><em><?php echo get_string('editdescription_help', 'assignsubmission'); ?></em></p>
                 <?php endif; ?>
                 <?php if ($can_grade): ?>
-                    <button class="btn btn-outline-primary btn-sm" id="btn-edit-description" title="<?php echo get_string('editdescription', 'assignsubmission'); ?>">
-                        <i class="fa fa-pencil"></i> <?php echo get_string('editdescription', 'assignsubmission'); ?>
-                    </button>
+                    <div class="mt-2">
+                        <button class="btn btn-outline-primary btn-sm me-2" id="btn-edit-description" title="<?php echo get_string('editdescription', 'assignsubmission'); ?>">
+                            <i class="fa fa-pencil"></i> <?php echo get_string('editdescription', 'assignsubmission'); ?>
+                        </button>
+                        <button class="btn btn-outline-info btn-sm me-2" id="btn-view-mapping" title="<?php echo get_string('viewmapping', 'assignsubmission'); ?>">
+                            <i class="fa fa-list"></i> <?php echo get_string('viewmapping', 'assignsubmission'); ?> (<?php echo count($course_mappings); ?>)
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" id="btn-upload-mapping" title="<?php echo get_string('uploadmapping', 'assignsubmission'); ?>">
+                            <i class="fa fa-upload"></i> <?php echo get_string('uploadmapping', 'assignsubmission'); ?>
+                        </button>
+                    </div>
                 <?php endif; ?>
             </div>
             <div>
@@ -324,6 +338,74 @@ echo $OUTPUT->header();
     </div>
 </div>
 
+<!-- Upload mapping modal -->
+<div class="modal" tabindex="-1" role="dialog" id="mapping-modal" style="display:none; background: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><?php echo get_string('mapping_title', 'assignsubmission'); ?></h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small mb-3">
+                    <i class="fa fa-info-circle"></i>
+                    <?php echo get_string('mapping_help', 'assignsubmission'); ?>
+                </div>
+                <div class="form-group">
+                    <label for="mapping-file" class="font-weight-bold"><?php echo get_string('csv_file', 'assignsubmission'); ?></label>
+                    <input type="file" id="mapping-file" class="form-control-file" accept=".csv">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="mapping-cancel"><?php echo get_string('autograde_cancel', 'assignsubmission'); ?></button>
+                <button type="button" class="btn btn-primary" id="mapping-upload"><?php echo get_string('upload', 'assignsubmission'); ?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View mapping modal -->
+<div class="modal" tabindex="-1" role="dialog" id="viewmapping-modal" style="display:none; background: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><?php echo get_string('viewmapping_title', 'assignsubmission'); ?></h5>
+                <button type="button" class="close" id="viewmapping-close-top" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0" style="max-height: 400px; overflow-y: auto;">
+                <?php if (empty($course_mappings)): ?>
+                    <div class="p-4 text-center text-muted">
+                        <p class="mb-0"><?php echo get_string('nomappings', 'assignsubmission'); ?></p>
+                    </div>
+                <?php else: ?>
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>#</th>
+                                <th><?php echo get_string('studentid', 'assignsubmission'); ?></th>
+                                <th><?php echo get_string('studentname', 'assignsubmission'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $mi = 1; foreach ($course_mappings as $map): ?>
+                            <tr>
+                                <td><?php echo $mi++; ?></td>
+                                <td><strong><?php echo s($map->studentid); ?></strong></td>
+                                <td><?php echo s($map->studentname); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="viewmapping-close"><?php echo get_string('close', 'assignsubmission'); ?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
     const cmid = <?php echo $cm->id; ?>;
@@ -353,6 +435,8 @@ echo $OUTPUT->header();
         ocrtext: <?php echo json_encode(get_string('ocrtext', 'assignsubmission')); ?>,
         editsubmission: <?php echo json_encode(get_string('editsubmission', 'assignsubmission')); ?>,
         descriptionsaved: <?php echo json_encode(get_string('descriptionsaved', 'assignsubmission')); ?>,
+        uploading: <?php echo json_encode(get_string('uploading', 'assignsubmission')); ?>,
+        upload: <?php echo json_encode(get_string('upload', 'assignsubmission')); ?>,
     };
 
     // ---- Upload handling ----
@@ -880,6 +964,86 @@ echo $OUTPUT->header();
 
             saveBtn.disabled = false;
             saveBtn.textContent = <?php echo json_encode(get_string('edit_save', 'assignsubmission')); ?>;
+        });
+    }
+
+    // ---- Course Student Mapping Upload ----
+    const uploadMappingBtn = document.getElementById('btn-upload-mapping');
+    if (uploadMappingBtn) {
+        uploadMappingBtn.addEventListener('click', function() {
+            document.getElementById('mapping-modal').style.display = 'flex';
+        });
+    }
+
+    const mappingCancel = document.getElementById('mapping-cancel');
+    if (mappingCancel) {
+        mappingCancel.addEventListener('click', function() {
+            document.getElementById('mapping-modal').style.display = 'none';
+        });
+    }
+
+    const mappingUploadSave = document.getElementById('mapping-upload');
+    if (mappingUploadSave) {
+        mappingUploadSave.addEventListener('click', async function() {
+            const fileInput = document.getElementById('mapping-file');
+            if (fileInput.files.length === 0) {
+                alert('Please select a CSV file first.');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const btn = mappingUploadSave;
+            btn.disabled = true;
+            btn.textContent = strings.uploading;
+
+            try {
+                const formData = new FormData();
+                formData.append('cmid', cmid);
+                formData.append('sesskey', sesskey);
+                formData.append('csvfile', file);
+
+                const response = await fetch(wwwroot + '/mod/assignsubmission/mapping_upload.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert(result.message);
+                    document.getElementById('mapping-modal').style.display = 'none';
+                    fileInput.value = ''; // Reset file input
+                } else {
+                    alert(result.message || 'Upload failed.');
+                }
+            } catch (err) {
+                console.error('Mapping upload error:', err);
+                alert('An error occurred during upload.');
+            }
+
+            btn.disabled = false;
+            btn.textContent = strings.upload;
+        });
+    }
+
+    // ---- View Mapping Modal ----
+    const viewMappingBtn = document.getElementById('btn-view-mapping');
+    if (viewMappingBtn) {
+        viewMappingBtn.addEventListener('click', function() {
+            document.getElementById('viewmapping-modal').style.display = 'flex';
+        });
+    }
+
+    const viewMappingClose = document.getElementById('viewmapping-close');
+    if (viewMappingClose) {
+        viewMappingClose.addEventListener('click', function() {
+            document.getElementById('viewmapping-modal').style.display = 'none';
+        });
+    }
+
+    const viewMappingCloseTop = document.getElementById('viewmapping-close-top');
+    if (viewMappingCloseTop) {
+        viewMappingCloseTop.addEventListener('click', function() {
+            document.getElementById('viewmapping-modal').style.display = 'none';
         });
     }
 })();

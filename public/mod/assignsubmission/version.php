@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026040302;
+$plugin->version   = 2026040601;
 $plugin->requires  = 2025092600;
 $plugin->component = 'mod_assignsubmission';
 $plugin->cron      = 0;

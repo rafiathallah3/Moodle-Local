@@ -94,3 +94,17 @@ $string['editdescription'] = 'Edit Deskripsi';
 $string['editdescription_title'] = 'Edit Deskripsi Tugas';
 $string['editdescription_help'] = 'Deskripsi ini digunakan sebagai patokan oleh penilai AI ketika mengevaluasi tugas mahasiswa. Misalnya, tentukan format input/output yang diharapkan, kriteria rubrik, atau persyaratan tertentu.';
 $string['descriptionsaved'] = 'Deskripsi berhasil disimpan.';
+
+// Student Mapping CSV.
+$string['viewmapping'] = 'Lihat Pemetaan Mahasiswa';
+$string['viewmapping_title'] = 'Pemetaan Mahasiswa Kursus';
+$string['nomappings'] = 'Tidak ada pemetaan mahasiswa yang ditemukan untuk kursus ini. Silakan unggah CSV pemetaan.';
+$string['studentid'] = 'NIM (ID Mahasiswa)';
+$string['close'] = 'Tutup';
+$string['uploadmapping'] = 'Unggah CSV Baru';
+$string['mapping_title'] = 'Unggah Pemetaan Mahasiswa Kursus (CSV)';
+$string['mapping_help'] = 'Unggah file CSV (dipisahkan titik koma) yang berisi NIM dan nama mahasiswa. Pemetaan ini akan berlaku untuk SEMUA aktivitas Pengumpulan Tugas di kursus ini. Ini digunakan untuk mengidentifikasi mahasiswa secara cepat dari nama file gambar yang diunggah (misalnya, jika nama file berisi "1030...").';
+$string['csv_file'] = 'File CSV (.csv)';
+$string['upload'] = 'Unggah';
+$string['mappinguploaded'] = 'Berhasil mengunggah {$a} pemetaan mahasiswa.';
+$string['uploading'] = 'Mengunggah...';

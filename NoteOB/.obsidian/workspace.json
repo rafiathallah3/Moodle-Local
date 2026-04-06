@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "AI_Diagnosis.md",
+                "file": "Overview.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "AI_Diagnosis"
+              "title": "Overview"
             }
           }
         ]
@@ -185,8 +185,8 @@
   },
   "active": "9f3ab74286a60815",
   "lastOpenFiles": [
-    "Overview.md",
     "AI_Diagnosis.md",
+    "Overview.md",
     "KC Graph.md",
     "Assignments Submission.md",
     "OCR.md",

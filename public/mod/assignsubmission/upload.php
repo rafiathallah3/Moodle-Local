@@ -102,10 +102,26 @@ $tempdir = make_request_directory();
 $temppath = $tempdir . '/' . $record->filename;
 $storedfile->copy_content_to($temppath);
 
-// Run OCR to extract text from image.
+// Attempt to extract studentname from filename using mapped CSV data
 $studentname = 'Unnamed';
+$mapped_name_found = false;
+
+$mappings = $DB->get_records('assignsubmission_mapping', array('course' => $course->id));
+foreach ($mappings as $mapping) {
+    // Check if the filename contains the student ID (e.g., 1030...)
+    if (strpos($record->filename, $mapping->studentid) !== false) {
+        $studentname = $mapping->studentname;
+        $mapped_name_found = true;
+        break; // Match found!
+    }
+}
+
+// Run OCR to extract text from image.
 $ocrtext = '';
 $ocr_debug = array(); // Diagnostic info.
+if ($mapped_name_found) {
+    $ocr_debug[] = 'Student name resolved from CSV mapping: ' . $studentname;
+}
 
 $script_path = dirname($CFG->dirroot) . '/admin/cli/ocr.py';
 $ocr_debug[] = 'Trying script path: ' . $script_path;
@@ -148,12 +164,16 @@ if (file_exists($script_path)) {
             $ocrtext = $extracted_text;
             $ocr_debug[] = 'OCR success! Extracted ' . strlen($extracted_text) . ' chars';
 
-            // Now use Gemini to extract the student name from the OCR text.
-            if (!empty($extracted_text) && $extracted_text !== 'Text not found inside the image.') {
-                $studentname = extract_student_name_from_text($extracted_text);
-                $ocr_debug[] = 'Extracted student name: ' . $studentname;
+            if (!$mapped_name_found) {
+                // Now use Gemini to extract the student name from the OCR text.
+                if (!empty($extracted_text) && $extracted_text !== 'Text not found inside the image.') {
+                    $studentname = extract_student_name_from_text($extracted_text);
+                    $ocr_debug[] = 'Extracted student name from text: ' . $studentname;
+                } else {
+                    $ocr_debug[] = 'No usable text found in image for student name extraction';
+                }
             } else {
-                $ocr_debug[] = 'No usable text found in image';
+                $ocr_debug[] = 'Skipped student name extraction (already mapped via filename)';
             }
         }
     }
