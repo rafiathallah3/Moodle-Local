@@ -225,7 +225,8 @@ $tool_action = $result['tool_action'] ?? null;
 if ($tool_action && is_array($tool_action) && isset($tool_action['action'])) {
     if ($tool_action['action'] === 'create_quiz' && !empty($tool_action['sectionid'])) {
         $theme = $tool_action['theme'] ?? null;
-        $tool_result = handle_create_quiz((int) $tool_action['sectionid'], $theme);
+        $language = $tool_action['language'] ?? 'English';
+        $tool_result = handle_create_quiz((int) $tool_action['sectionid'], $theme, $language);
     }
 }
 
@@ -250,6 +251,28 @@ $response = [
 
 if ($tool_result !== null) {
     $response['tool_result'] = $tool_result;
+} elseif ($tool_action) {
+    if (is_string($tool_action)) {
+        // AI returned tool action as a JSON string instead of object
+        $parsed = json_decode($tool_action, true);
+        if (is_array($parsed) && isset($parsed['action']) && $parsed['action'] === 'create_quiz') {
+            $sectionid = $parsed['sectionid'] ?? null;
+            $theme = $parsed['theme'] ?? null;
+            $language = $parsed['language'] ?? 'English';
+            if (!empty($sectionid)) {
+                $tool_result = handle_create_quiz((int) $sectionid, $theme, $language);
+                $response['tool_result'] = $tool_result;
+            } else {
+                $response['message'] .= "\n\n*(System Debug): Tool action string decoded, but sectionid is missing: " . $tool_action . "*";
+            }
+        } else {
+            $response['message'] .= "\n\n*(System Debug): Tool action payload was an unparseable string: " . $tool_action . "*";
+        }
+    } else {
+        // It's an array, but skipped
+        $debuginfo = json_encode($tool_action);
+        $response['message'] .= "\n\n*(System Debug): Tool action was skipped dynamically in PHP. tool_action payload received: " . $debuginfo . "*";
+    }
 }
 
 echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -265,7 +288,8 @@ echo json_encode($response, JSON_UNESCAPED_UNICODE);
  * @param int $sectionid  The course section ID.
  * @param string|null $theme  Optional topic/theme for the quiz (e.g., "sorting algorithms").
  */
-function handle_create_quiz(int $sectionid, ?string $theme = null): array {
+function handle_create_quiz(int $sectionid, ?string $theme = null, string $language = 'English'): array
+{
     global $DB, $USER, $CFG;
 
     try {
@@ -379,24 +403,22 @@ function handle_create_quiz(int $sectionid, ?string $theme = null): array {
 
         $questions_added = false;
 
-        if ($theme) {
-            // THEMED QUIZ: Search for questions matching the theme, or generate new ones.
-            $questions_added = handle_themed_questions($result->instance, $course, $section, $theme, $adminuser);
+        if ($theme || strcasecmp($language, 'English') !== 0) {
+            // THEMED OR LOCALIZED QUIZ: Search for questions matching the theme, or generate new ones.
+            $search_theme = $theme ?: (!empty($sectionname) ? $sectionname : 'General Concepts');
+            $questions_added = handle_themed_questions($result->instance, $course, $section, $search_theme, $adminuser, $language);
         }
 
         if (!$questions_added) {
             // FALLBACK: Try section-based random question matching (original behavior).
             $catsql_base = "SELECT qc.id, qc.name
-                             FROM {qbank} m
-                             JOIN {course_modules} cm ON m.id = cm.instance
-                             JOIN {modules} mods ON cm.module = mods.id AND mods.name = 'qbank'
-                             JOIN {context} ctx ON cm.id = ctx.instanceid AND ctx.contextlevel = 70
-                             JOIN {question_categories} qc ON qc.contextid = ctx.id AND qc.name != 'top'
-                            WHERE m.course = ?";
+                             FROM {question_categories} qc
+                             JOIN {context} ctx ON ctx.id = qc.contextid AND ctx.contextlevel = 50
+                            WHERE ctx.instanceid = ?";
 
             $category = null;
             if (!empty($sectionname)) {
-                $catsql = $catsql_base . " AND m.name LIKE ?";
+                $catsql = $catsql_base . " AND qc.name LIKE ?";
                 $category = $DB->get_record_sql($catsql, [$course->id, '%' . $sectionname . '%'], IGNORE_MULTIPLE);
             }
 
@@ -435,7 +457,7 @@ function handle_create_quiz(int $sectionid, ?string $theme = null): array {
         }
         $msg .= ' Refresh the page to see it.';
 
-        return ['success' => true, 'message' => $msg];
+        return ['success' => true, 'message' => $msg, 'language' => $language];
 
     } catch (\Exception $e) {
         if (isset($originaluser)) {
@@ -456,15 +478,19 @@ function handle_create_quiz(int $sectionid, ?string $theme = null): array {
  * @param object $adminuser  The admin user for capability checks.
  * @return bool  True if questions were successfully added.
  */
-function handle_themed_questions(int $quizinstance, object $course, object $section, string $theme, object $adminuser): bool {
+function handle_themed_questions(int $quizinstance, object $course, object $section, string $theme, object $adminuser, string $language = 'English'): bool
+{
     global $DB, $CFG;
 
     // 1. Search for existing questions matching the theme in this course's question banks.
-    $matching_questions = search_questions_by_theme($course->id, $theme);
+    // We skip this if language is not English, to force generation of localized questions.
+    if (strcasecmp($language, 'English') === 0) {
+        $matching_questions = search_questions_by_theme($course->id, $theme);
 
-    if (!empty($matching_questions)) {
-        // Use existing questions — add them directly to the quiz.
-        return add_questions_to_quiz($quizinstance, $matching_questions);
+        if (!empty($matching_questions)) {
+            // Use existing questions — add them directly to the quiz.
+            return add_questions_to_quiz($quizinstance, $matching_questions);
+        }
     }
 
     // 2. No matching questions found — generate new ones via AI.
@@ -485,6 +511,7 @@ function handle_themed_questions(int $quizinstance, object $course, object $sect
         . " --section " . escapeshellarg($sectionname)
         . " --course " . escapeshellarg($course->fullname)
         . " --count 1"
+        . " --lang " . escapeshellarg($language)
         . " 2>&1";
 
     $output = shell_exec($command);
@@ -532,7 +559,8 @@ function handle_themed_questions(int $quizinstance, object $course, object $sect
  * @param string $theme  The theme to search for.
  * @return array  Array of question IDs.
  */
-function search_questions_by_theme(int $courseid, string $theme): array {
+function search_questions_by_theme(int $courseid, string $theme): array
+{
     global $DB;
 
     // Search question names and text matching the theme within this course's qbank categories.
@@ -541,10 +569,8 @@ function search_questions_by_theme(int $courseid, string $theme): array {
               JOIN {question_versions} qv ON qv.questionid = q.id
               JOIN {question_bank_entries} qbe ON qbe.id = qv.questionbankentryid
               JOIN {question_categories} qc ON qc.id = qbe.questioncategoryid
-              JOIN {context} ctx ON ctx.id = qc.contextid AND ctx.contextlevel = 70
-              JOIN {course_modules} cm ON cm.id = ctx.instanceid
-              JOIN {modules} mods ON cm.module = mods.id AND mods.name = 'qbank'
-             WHERE cm.course = ?
+              JOIN {context} ctx ON ctx.id = qc.contextid AND ctx.contextlevel = 50
+             WHERE ctx.instanceid = ?
                AND qv.status = 'ready'
                AND (q.name LIKE ? OR q.questiontext LIKE ?)
              LIMIT 1";
@@ -563,19 +589,18 @@ function search_questions_by_theme(int $courseid, string $theme): array {
  * @param string $theme  The theme name.
  * @return int|null  The category ID, or null on failure.
  */
-function get_or_create_theme_category(object $course, string $theme): ?int {
+function get_or_create_theme_category(object $course, string $theme): ?int
+{
     global $DB;
 
     $cat_name = 'AI Generated - ' . ucwords($theme);
 
-    // Look for an existing category with this name in any qbank context for this course.
+    // Look for an existing category with this name in any course context for this course.
     $existing = $DB->get_record_sql(
         "SELECT qc.id
            FROM {question_categories} qc
-           JOIN {context} ctx ON ctx.id = qc.contextid AND ctx.contextlevel = 70
-           JOIN {course_modules} cm ON cm.id = ctx.instanceid
-           JOIN {modules} mods ON cm.module = mods.id AND mods.name = 'qbank'
-          WHERE cm.course = ? AND qc.name = ?",
+           JOIN {context} ctx ON ctx.id = qc.contextid AND ctx.contextlevel = 50
+          WHERE ctx.instanceid = ? AND qc.name = ?",
         [$course->id, $cat_name],
         IGNORE_MULTIPLE
     );
@@ -584,16 +609,8 @@ function get_or_create_theme_category(object $course, string $theme): ?int {
         return (int) $existing->id;
     }
 
-    // Find the first qbank context in this course to create the category in.
-    $qbank_ctx = $DB->get_record_sql(
-        "SELECT ctx.id as contextid
-           FROM {context} ctx
-           JOIN {course_modules} cm ON cm.id = ctx.instanceid AND ctx.contextlevel = 70
-           JOIN {modules} mods ON cm.module = mods.id AND mods.name = 'qbank'
-          WHERE cm.course = ?
-          LIMIT 1",
-        [$course->id]
-    );
+    // Use the course context to create the category in.
+    $qbank_ctx = $DB->get_record('context', ['instanceid' => $course->id, 'contextlevel' => 50]);
 
     if (!$qbank_ctx) {
         return null;
@@ -602,7 +619,7 @@ function get_or_create_theme_category(object $course, string $theme): ?int {
     // Create new category
     $cat = new \stdClass();
     $cat->name = $cat_name;
-    $cat->contextid = $qbank_ctx->contextid;
+    $cat->contextid = $qbank_ctx->id;
     $cat->info = 'Questions generated by AI for the theme: ' . $theme;
     $cat->infoformat = FORMAT_HTML;
     $cat->stamp = make_unique_id_code();
@@ -612,7 +629,7 @@ function get_or_create_theme_category(object $course, string $theme): ?int {
 
     // Find the 'top' category parent
     $top = $DB->get_record('question_categories', [
-        'contextid' => $qbank_ctx->contextid,
+        'contextid' => $qbank_ctx->id,
         'name' => 'top',
     ]);
     if ($top) {
@@ -632,7 +649,8 @@ function get_or_create_theme_category(object $course, string $theme): ?int {
  * @param string $text  The question text (HTML).
  * @return int|null  The question ID, or null on failure.
  */
-function insert_essay_question(int $categoryid, string $name, string $text): ?int {
+function insert_essay_question(int $categoryid, string $name, string $text): ?int
+{
     global $DB;
 
     try {
@@ -706,7 +724,8 @@ function insert_essay_question(int $categoryid, string $name, string $text): ?in
  * @param array $questionids  Array of question IDs to add.
  * @return bool  True if at least one question was added.
  */
-function add_questions_to_quiz(int $quizinstance, array $questionids): bool {
+function add_questions_to_quiz(int $quizinstance, array $questionids): bool
+{
     global $DB;
 
     if (empty($questionids)) {

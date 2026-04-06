@@ -81,7 +81,7 @@ def transcribe_azure(audio_path, api_key):
 def transcribe_gemini(audio_path, api_key):
     import base64
     import mimetypes
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_openai import ChatOpenAI
     from langchain_core.messages import HumanMessage
     
     mime_type, _ = mimetypes.guess_type(audio_path)
@@ -94,9 +94,9 @@ def transcribe_gemini(audio_path, api_key):
     with open(audio_path, "rb") as f:
         audio_data = base64.b64encode(f.read()).decode('utf-8')
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=api_key,
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        openai_api_key=api_key,
         temperature=0
     )
 
@@ -104,9 +104,8 @@ def transcribe_gemini(audio_path, api_key):
         HumanMessage(content=[
             {"type": "text", "text": "Please transcribe the following audio accurately. Output only the transcript text."},
             {
-                "type": "media",
-                "mime_type": mime_type,
-                "data": audio_data
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{audio_data}"}
             }
         ])
     ]
@@ -117,7 +116,7 @@ def transcribe_gemini(audio_path, api_key):
         return transcript
     except Exception as e:
         error_msg = str(e)
-        raise Exception(f"LangChain Gemini transcription error: {error_msg}")
+        raise Exception(f"LangChain OpenAI transcription error: {error_msg}")
 
 def main():
     parser = argparse.ArgumentParser(description="Transcribe audio using AI models")
@@ -154,7 +153,7 @@ def main():
         elif args.model == "azure":
             transcript = transcribe_azure(args.audio, azure_api)
         elif args.model == "gemini":
-            transcript = transcribe_gemini(args.audio, gemini_api)
+            transcript = transcribe_gemini(args.audio, openai_api)
         else:
             raise Exception("Invalid model selected")
             

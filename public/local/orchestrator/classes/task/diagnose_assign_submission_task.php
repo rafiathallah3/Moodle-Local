@@ -28,7 +28,10 @@ class diagnose_assign_submission_task extends \core\task\adhoc_task {
         $submission_text = '';
         $onlinetext = $DB->get_record('assignsubmission_onlinetext', ['submission' => $submissionid]);
         if ($onlinetext) {
-            $submission_text = trim(strip_tags($onlinetext->onlinetext));
+            $text_with_newlines = preg_replace('/<br\s*\/?>/i', "\n", $onlinetext->onlinetext);
+            $text_with_newlines = preg_replace('/<\/(p|div|li|tr|h[1-6])>/i', "\n", $text_with_newlines);
+            $text_with_newlines = preg_replace('/&nbsp;/i', ' ', $text_with_newlines);
+            $submission_text = trim(strip_tags($text_with_newlines));
         }
 
         // Extract media
@@ -62,6 +65,13 @@ class diagnose_assign_submission_task extends \core\task\adhoc_task {
         $questiontextpath = $tempdir . '/question_text.txt';
         file_put_contents($questiontextpath, strip_tags($assignment_record->intro));
 
+        // Get the student's language preference for diagnosis output.
+        $student_lang = 'en'; // fallback
+        $student_user = $DB->get_record('user', ['id' => $submission->userid], 'lang');
+        if ($student_user && !empty($student_user->lang)) {
+            $student_lang = $student_user->lang;
+        }
+
         $script_path = dirname($CFG->dirroot) . '/admin/cli/diagnose.py';
         if (!file_exists($script_path)) {
             $script_path = $CFG->dirroot . '/admin/cli/diagnose.py';
@@ -76,6 +86,7 @@ class diagnose_assign_submission_task extends \core\task\adhoc_task {
         }
         $command .= " --questiontextfile " . escapeshellarg($questiontextpath);
         $command .= " --maxmark " . escapeshellarg($maxmark);
+        $command .= " --language " . escapeshellarg($student_lang);
         $command .= " 2>&1";
 
         $output_json = shell_exec($command);

@@ -11,7 +11,13 @@ class diagnose_quiz_attempt_task extends \core\task\adhoc_task {
         $attemptid = $this->get_custom_data()->attemptid;
 
         $attempt = $DB->get_record('quiz_attempts', ['id' => $attemptid]);
-        if (!$attempt || $attempt->state !== 'finished') {
+        if (!$attempt) {
+            return;
+        }
+        // When executed synchronously from the attempt_submitted event handler,
+        // the attempt state may still be 'inprogress' because the DB transaction
+        // hasn't committed yet. We allow both states here.
+        if (!in_array($attempt->state, ['finished', 'inprogress'])) {
             return;
         }
 
@@ -20,6 +26,13 @@ class diagnose_quiz_attempt_task extends \core\task\adhoc_task {
 
         $modified = false;
         $tempdir = make_request_directory();
+
+        // Get the student's language preference for diagnosis output.
+        $student_lang = 'en'; // fallback
+        $student_user = $DB->get_record('user', ['id' => $attempt->userid], 'lang');
+        if ($student_user && !empty($student_user->lang)) {
+            $student_lang = $student_user->lang;
+        }
 
         foreach ($slots as $slot) {
             $qa = $quba->get_question_attempt($slot);
@@ -47,7 +60,12 @@ class diagnose_quiz_attempt_task extends \core\task\adhoc_task {
                 }
             }
 
-            $clean_text = trim(strip_tags($responsetext));
+            // Convert HTML line breaks and block-level tags to newlines
+            // BEFORE stripping tags, to preserve pseudo-code structure.
+            $text_with_newlines = preg_replace('/<br\\s*\\/?>/i', "\n", $responsetext);
+            $text_with_newlines = preg_replace('/<\\/(p|div|li|tr|h[1-6])>/i', "\n", $text_with_newlines);
+            $text_with_newlines = preg_replace('/&nbsp;/i', ' ', $text_with_newlines);
+            $clean_text = trim(strip_tags($text_with_newlines));
             if ($clean_text === '' && !$mediafile) {
                 continue;
             }
@@ -83,6 +101,7 @@ class diagnose_quiz_attempt_task extends \core\task\adhoc_task {
             }
             $command .= " --questiontextfile " . escapeshellarg($questiontextpath);
             $command .= " --maxmark " . escapeshellarg($maxmark);
+            $command .= " --language " . escapeshellarg($student_lang);
             $command .= " 2>&1";
 
             $output_json = shell_exec($command);

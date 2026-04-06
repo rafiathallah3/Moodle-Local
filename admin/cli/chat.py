@@ -18,7 +18,7 @@ import json
 import os
 import sys
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 
@@ -57,7 +57,10 @@ def build_system_prompt(context: dict) -> str:
         "- Be concise. Use Markdown formatting (bold, bullet points, numbered lists).\n"
         "- Never fabricate information. Only use the context provided below.\n"
         "- If the student asks something outside your context, politely say you don't have that data.\n"
-        "- When the student asks to create a quiz, you MUST respond with a tool action.\n\n"
+        "- When the student asks to create a quiz, you MUST respond with a tool action.\n"
+        "- **Language**: Detect the language the student is writing in or explicitly requesting. "
+        "Respond in the SAME language the student uses. For example, if a student writes in Indonesian, "
+        "respond in Indonesian. If they write in English, respond in English.\n\n"
     )
 
     # --- Student info ---
@@ -111,15 +114,23 @@ def build_system_prompt(context: dict) -> str:
         "1. Identify the best matching section from the course sections above.\n"
         "2. If the student mentions a specific **topic or theme** (e.g., 'sorting algorithms', 'binary search', 'linked lists'),\n"
         "   extract it and include it as the `theme` field.\n"
-        "3. Output your response so that the `tool_action` field contains:\n"
-        '   `{"action": "create_quiz", "sectionid": <the section ID>, "theme": "<topic>" or null}`\n'
-        "4. In your message, confirm which section and theme you are creating the quiz for.\n"
-        "5. If the student does not specify a section, ask them which section they want.\n"
-        "6. If there is only one section (besides section 0), use that one.\n"
-        "7. If no specific theme is mentioned, set `theme` to `null`.\n\n"
+        "3. Detect the **language** the student is using or explicitly requesting for the quiz. "
+        "Use the full language name (e.g., 'Indonesian', 'English', 'Japanese', 'Spanish'). "
+        "If the student writes in a non-English language, assume they want the quiz in that language. "
+        "If they explicitly request a language (e.g., 'in Indonesian', 'dalam bahasa Indonesia'), use that. "
+        "Default to 'English' if no other language is detected.\n"
+        "4. Output your response so that the `tool_action` field contains:\n"
+        '   `{"action": "create_quiz", "sectionid": <the section ID>, "theme": "<topic>" or null, "language": "<language name>"}`\n'
+        "5. In your message, confirm which section, theme, and language you are creating the quiz for.\n"
+        "6. If the student does not specify a section, or you cannot find the requested section in the context, ask them which section they want and set `tool_action` to `null`.\n"
+        "7. If there is only one section (besides section 0), use that one.\n"
+        "8. If no specific theme is mentioned, set `theme` to `null`.\n"
+        "9. **CRITICAL**: If you return `create_quiz`, `sectionid` must be an integer ID found in the Course Sections. Do NOT use `null` or a string for `sectionid`. If you don't know the ID, you cannot create the quiz.\n\n"
         "Examples:\n"
-        '- Student: "Create a quiz about sorting for Week 2" → `{"action": "create_quiz", "sectionid": 10, "theme": "sorting algorithms"}`\n'
-        '- Student: "Give me a practice quiz for Week 1" → `{"action": "create_quiz", "sectionid": 5, "theme": null}`\n\n'
+        '- Student: "Create a quiz about sorting for Week 2" → `{"action": "create_quiz", "sectionid": 10, "theme": "sorting algorithms", "language": "English"}`\n'
+        '- Student: "Give me a practice quiz for Week 1" → `{"action": "create_quiz", "sectionid": 5, "theme": null, "language": "English"}`\n'
+        '- Student: "Buatkan kuis tentang linked list untuk Week 3" → `{"action": "create_quiz", "sectionid": 15, "theme": "linked list", "language": "Indonesian"}`\n'
+        '- Student: "Create a quiz about arrays in Japanese" → `{"action": "create_quiz", "sectionid": 8, "theme": "arrays", "language": "Japanese"}`\n\n'
         "For all other requests, set `tool_action` to `null`.\n\n"
         "IMPORTANT: Your entire response MUST be a valid JSON object with exactly two keys:\n"
         '- "message": your response text (Markdown allowed)\n'
@@ -135,9 +146,9 @@ def run_chat(prompt: str, context: dict, history: list, api_key: str) -> dict:
 
     Returns a dict with 'message' and 'tool_action' keys.
     """
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=api_key,
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        openai_api_key=api_key,
         temperature=0.7,
     )
 
@@ -219,9 +230,9 @@ def main():
 
     load_env()
 
-    gemini_api = os.environ.get("GEMINI_API")
-    if not gemini_api:
-        print(json.dumps({"status": "error", "message": "GEMINI_API missing in .env"}))
+    openai_api = os.environ.get("OPENAI_API")
+    if not openai_api:
+        print(json.dumps({"status": "error", "message": "OPENAI_API missing in .env"}))
         sys.exit(1)
 
     # Load Moodle context
@@ -237,7 +248,7 @@ def main():
             history = json.load(f)
 
     try:
-        result = run_chat(args.prompt, context, history, gemini_api)
+        result = run_chat(args.prompt, context, history, openai_api)
         print(
             json.dumps(
                 {

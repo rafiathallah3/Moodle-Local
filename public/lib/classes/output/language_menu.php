@@ -108,7 +108,7 @@ class language_menu implements renderable, templatable {
                 'text' => $langname,
                 'link' => true,
                 'isactive' => $isactive,
-                'url' => $isactive ? new \moodle_url('#') : new \moodle_url($this->page->url, ['lang' => $langtype]),
+                'url' => $isactive ? new \moodle_url('#') : new \moodle_url('/local/setlang.php', ['lang' => $langtype, 'sesskey' => sesskey(), 'returnurl' => $this->page->url->out_as_local_url(false)]),
             ];
             if (!empty($attributes)) {
                 $node['attributes'] = $attributes;

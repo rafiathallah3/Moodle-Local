@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "AI_Diagnosis.md",
-                "mode": "source",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 200
   },
   "right": {
     "id": "509c5ed1e74207d9",
@@ -185,13 +185,14 @@
   },
   "active": "9f3ab74286a60815",
   "lastOpenFiles": [
-    "AI_Chatbot.md",
-    "AI_Diagnosis.md",
-    "Transcription.md",
     "Overview.md",
+    "AI_Diagnosis.md",
+    "KC Graph.md",
+    "Assignments Submission.md",
     "OCR.md",
+    "Transcription.md",
+    "AI_Chatbot.md",
     "Untitled.base",
-    "Untitled.md",
     "Moodle/To-Do di Moodle.md",
     "Untitled",
     "Moodle",

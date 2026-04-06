@@ -1,0 +1,191 @@
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 100.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code must start with 'program [Name]'. Ensure the program is written following the specified pseudo-code structure.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nhello"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code must start with 'program [Name]'. Ensure the program is written following the specified pseudo-code structure."}
+
+LOGIC RESULT:
+{"mark":0.0,"logic_feedback":"The response 'hello' does not attempt to solve any logical problem or follow any algorithmic approach. Please provide a correct pseudo-code structure starting with 'program [Name]'. Additionally, ensure your pseudo-code attempts to solve the intended problem logically."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 100.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code does not follow pseudo-code syntax rules. It appears to be Python code instead. Pseudo-code must start with 'program [Name]' and end with 'endprogram'. It should also contain an 'algorithm' section. The given code is structured as Python with modules, classes, and functions, which does not align with expected pseudo-code structure.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nimport argparse\nimport base64\nimport json\nimport mimetypes\nimport os\nimport sys\n\nfrom langchain_core.messages import HumanMessage, SystemMessage\nfrom langchain_openai import ChatOpenAI\nfrom pydantic import BaseModel, Field\n\n\ndef load_env():\n    env_path = os.path.join(\n        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),\n        \".env\",\n    )\n    if os.path.exists(env_path):\n        with open(env_path, \"r\") as f:\n            for line in f:\n                line = line.strip()\n                if not line or line.startswith(\"#\"):\n                    continue\n                if \"=\" in line:\n                    k, v = line.split(\"=\", 1)\n                    os.environ[k.strip()] = v.strip().strip(\"'\").strip('\"')\n\n\nclass SyntaxOutput(BaseModel):\n    is_valid: bool = Field(description=\"True if the pseudo-code has no major syntax errors\")\n    syntax_feedback: str = Field(\n        description=\"A short feedback focusing solely on pseudo-code syntax. Point out structural errors based on grammar.\"\n    )\n\nclass LogicDiagnosisOutput(BaseModel):\n    mark: float = Field(\n        description=\"The score determined for the student's answer out of the maximum mark.\"\n    )\n    logic_feedback: str = Field(\n        description=\"A short summary and a light diagnosis/feedback of the student's logic.\"\n    )\n\ndef diagnose_openai(text, media_path, question_text, max_mark, api_key, language):\n    lang_map = {\n        \"id\": \"Indonesian\",\n        \"en\": \"English\",\n        \"sn\": \"Sundanese\",\n        \"jw\": \"Javanese\",\n        \"fr\": \"French\",\n    }\n    raw_lang = language.lower().strip()\n    lang_name = lang_map.get(raw_lang, raw_lang)\n\n    if raw_lang == \"id\":\n        label_syntax = \"Pemeriksaan Sintaks\"\n        label_logic = \"Pemeriksaan Logika\"\n    elif raw_lang == \"sn\":\n        label_syntax = \"Pamariksaan Sintaks\"\n        label_logic = \"Pamariksaan Logika\"\n    elif raw_lang == \"jw\":\n        label_syntax = \"Pemeriksaan Sintaks\"\n        label_logic = \"Pemeriksaan Logika\"\n    else:\n        label_syntax = \"Syntax Check\"\n        label_logic = \"Logic Check\"\n\n    # Initialize the LLM with LangChain\n    llm = ChatOpenAI(model=\"gpt-4o\", openai_api_key=api_key)\n    \n    syntax_llm = llm.with_structured_output(SyntaxOutput)\n    logic_llm = llm.with_structured_output(LogicDiagnosisOutput)\n    \n    # Process the user submission content (text or media)\n    human_content = []\n\n    if text:\n        human_content.append({\"type\": \"text\", \"text\": f\"Student Text Answer:\\n{text}\"})\n\n    if not text and not media_path:\n        human_content.append({\"type\": \"text\", \"text\": \"No answer provided.\"})\n\n    if media_path and os.path.exists(media_path):\n        size = os.path.getsize(media_path)\n        if size == 0:\n            raise Exception(\"The recording file is empty (0 bytes).\")\n\n        mime_type, _ = mimetypes.guess_type(media_path)\n        ext = os.path.splitext(media_path)[1].lower()\n\n        if ext == \".webm\":\n            mime_type = \"audio/webm\"\n        elif not mime_type or \"/\" not in mime_type:\n            if ext in (\".jpg\", \".jpeg\", \".png\", \".gif\", \".webp\"):\n                mime_type = \"image/jpeg\"\n            elif ext in (\".mp4\", \".avi\", \".mov\"):\n                mime_type = \"video/mp4\"\n            else:\n                mime_type = \"audio/mpeg\"  # fallback\n\n        with open(media_path, \"rb\") as f:\n            media_data = base64.b64encode(f.read()).decode(\"utf-8\")\n\n        if mime_type.startswith(\"image/\"):\n            human_content.append(\n                {\n                    \"type\": \"image_url\",\n                    \"image_url\": {\"url\": f\"data:{mime_type};base64,{media_data}\"},\n                }\n            )\n        else:\n            human_content.append(\n                {\"type\": \"media\", \"mime_type\": mime_type, \"data\": media_data}\n            )\n            if not text:\n                human_content.append(\n                    {\n                        \"type\": \"text\",\n                        \"text\": \"Please transcribe and evaluate this audio/video directly.\",\n                    }\n                )\n                \n    # --- AGENT 1: SYNTAX CHECKER ---\n    syntax_instruction = (\n        \"You are an AI Syntax Checker Agent for pseudo-code.\\n\"\n        \"Here are the pseudo-code grammar rules you MUST check for:\\n\"\n        \"1. MUST start with 'program [Name]'.\\n\"\n        \"2. MUST end with 'endprogram'.\\n\"\n        \"3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.\\n\"\n        \"4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.\\n\"\n        \"5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.\\n\"\n        \"6. The assignment operator is `<-`. (Do NOT flag this as incorrect).\\n\\n\"\n        \"IMPORTANT:\\n\"\n        \"- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.\\n\"\n        \"- Do NOT be confused by 'function' declarations existing outside the main algorithm.\\n\"\n        \"- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).\\n\"\n        \"- Do not evaluate logical correctness, only focus on structural grammar and syntax.\\n\"\n        f\"- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in {lang_name}.\"\n    )\n    \n    syntax_messages = [SystemMessage(content=syntax_instruction)]\n    if human_content:\n        syntax_messages.append(HumanMessage(content=human_content))\n        \n    try:\n        syntax_response = syntax_llm.invoke(syntax_messages)\n    except Exception as e:\n        error_msg = str(e)\n        if \"SAFETY\" in error_msg.upper():\n            return {\n                \"mark\": 0.0,\n                \"diagnosis\": \"The AI Syntax Agent response was blocked due to safety filters.\",\n            }\n        raise Exception(f\"LangChain OpenAI API error (Syntax Agent): {error_msg}\")\n\n    # --- AGENT 2: LOGIC CHECKER ---\n    logic_instruction = (\n        \"You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.\\n\"\n        \"Please evaluate the logical correctness of the response inside the 'algorithm' block \"\n        \"and determine a score for the student's answer out of a maximum of {max_mark}.\\n\"\n        \"Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.\\n\"\n        \"Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.\\n\"\n        f\"TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in {lang_name}.\"\n    ).format(max_mark=max_mark)\n\n    if question_text:\n        logic_instruction += f\"\\n\\nQuestion/Assignment Description:\\n{question_text}\"\n        \n    logic_instruction += (\n        f\"\\n\\n--- Syntax Agent Feedback ---\\n\"\n        f\"Is Valid: {syntax_response.is_valid}\\n\"\n        f\"Feedback: {syntax_response.syntax_feedback}\\n\"\n    )\n\n    logic_messages = [SystemMessage(content=logic_instruction)]\n    if human_content:\n        logic_messages.append(HumanMessage(content=human_content))\n        \n    try:\n        logic_response = logic_llm.invoke(logic_messages)\n        \n        final_diagnosis = (\n            f\"{label_syntax}:\\n{syntax_response.syntax_feedback}\\n\\n\"\n            f\"{label_logic}:\\n{logic_response.logic_feedback}\"\n        )\n        \n        # --- DEBUG LOGGING ---\n        try:\n            debug_path = os.path.join(os.path.dirname(__file__), \"debug_diagnose.log\")\n            with open(debug_path, \"a\", encoding=\"utf-8\") as df:\n                df.write(f\"--- DEBUG DIAGNOSE RUN ---\\n\")\n                df.write(f\"Raw Lang: {raw_lang} | Resolved Lang Name: {lang_name}\\n\")\n                df.write(f\"SYNTAX PROMPT:\\n{syntax_instruction}\\n\\n\")\n                df.write(f\"LOGIC PROMPT:\\n{logic_instruction}\\n\\n\")\n                if human_content:\n                    df.write(f\"HUMAN CONTENT:\\n{json.dumps(human_content, indent=2)}\\n\\n\")\n                df.write(f\"SYNTAX RESULT:\\n{syntax_response.model_dump_json()}\\n\\n\")\n                df.write(f\"LOGIC RESULT:\\n{logic_response.model_dump_json()}\\n\\n\")\n                df.write(\"----------------------------\\n\")\n        except Exception:\n            pass\n        # ---------------------\n\n        return {\"mark\": float(logic_response.mark), \"diagnosis\": final_diagnosis}\n\n    except Exception as e:\n        error_msg = str(e)\n        if \"SAFETY\" in error_msg.upper():\n            return {\n                \"mark\": 0.0,\n                \"diagnosis\": \"The AI Logic Agent response was blocked due to safety filters.\",\n            }\n        raise Exception(f\"LangChain OpenAI API error (Logic Agent): {error_msg}\")\n\n\ndef main():\n    parser = argparse.ArgumentParser(description=\"Diagnose student answer using Gemini\")\n    parser.add_argument(\"--textfile\", help=\"Path to text file containing student text\")\n    parser.add_argument(\"--file\", help=\"Path to media file (audio/image/video)\")\n    parser.add_argument(\n        \"--questiontextfile\", help=\"Path to text file containing question description\"\n    )\n    parser.add_argument(\"--maxmark\", type=float, help=\"Maximum mark\", default=100.0)\n    parser.add_argument(\"--language\", help=\"Output language code (e.g., 'id', 'en')\", default=\"en\")\n\n    args = parser.parse_args()\n\n    load_env()\n\n    openai_api = os.environ.get(\"OPENAI_API\")\n    if not openai_api:\n        print(json.dumps({\"status\": \"error\", \"message\": \"OPENAI_API missing in .env\"}))\n        sys.exit(1)\n\n    text = \"\"\n    if args.textfile and os.path.exists(args.textfile):\n        with open(args.textfile, \"r\", encoding=\"utf-8\") as f:\n            text = f.read().strip()\n\n    question_text = \"\"\n    if args.questiontextfile and os.path.exists(args.questiontextfile):\n        with open(args.questiontextfile, \"r\", encoding=\"utf-8\") as f:\n            question_text = f.read().strip()\n\n    if not text and not args.file:\n        print(json.dumps({\"status\": \"error\", \"message\": \"No text or file provided\"}))\n        sys.exit(1)\n\n    try:\n        result = diagnose_openai(\n            text, args.file, question_text, args.maxmark, openai_api, args.language\n        )\n        print(\n            json.dumps(\n                {\n                    \"status\": \"success\",\n                    \"diagnosis\": result[\"diagnosis\"],\n                    \"mark\": result[\"mark\"],\n                }\n            )\n        )\n    except Exception as e:\n        print(json.dumps({\"status\": \"error\", \"message\": str(e)}))\n        sys.exit(1)\n\n\nif __name__ == \"__main__\":\n    main()"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code does not follow pseudo-code syntax rules. It appears to be Python code instead. Pseudo-code must start with 'program [Name]' and end with 'endprogram'. It should also contain an 'algorithm' section. The given code is structured as Python with modules, classes, and functions, which does not align with expected pseudo-code structure."}
+
+LOGIC RESULT:
+{"mark":0.0,"logic_feedback":"The submitted text is not a pseudo-code logic implementation but a Python script that appears to relate to diagnosing pseudo-code submissions using AI. This script handles tasks like loading environment variables, defining data structures, and processing inputs, but does not contain any algorithmic logic that could be evaluated in the context of student-submitted algorithms. Therefore, it cannot be graded for logical correctness in the context of pseudo-code algorithm evaluation."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 100.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code does not start with 'program [Name]'. Please ensure it follows the correct structure grammar rules for pseudo-code.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nhello"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code does not start with 'program [Name]'. Please ensure it follows the correct structure grammar rules for pseudo-code."}
+
+LOGIC RESULT:
+{"mark":0.0,"logic_feedback":"The pseudo-code provided is missing. For a logical evaluation, there must be some sort of algorithmic structure or pseudocode present. In this case, there's nothing to assess logically, hence a score of 0 is appropriate."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: id | Resolved Lang Name: Indonesian
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in Indonesian.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in Indonesian.
+
+Question/Assignment Description:
+Buatlah sebuah program yang melakukan perkalian dua matriks.
+
+**Input:** Baris pertama berisi dua bilangan bulat **m** dan **n** yang menunjukkan ukuran matriks pertama. Baris kedua berisi **m** x **n** bilangan bulat yang membentuk matriks pertama. Baris ketiga berisi dua bilangan bulat **n** dan **p** yang menunjukkan ukuran matriks kedua. Baris keempat berisi **n** x **p** bilangan bulat yang membentuk matriks kedua.
+
+**Output:** Matriks hasil perkalian dari kedua matriks tersebut, dengan ukuran **m** x **p**.
+
+--- Syntax Agent Feedback ---
+Is Valid: True
+Feedback: Struktur pseudo-code sudah benar. Semua elemen yang diperlukan sudah ada, termasuk deklarasi 'dictionary' dan bagian 'algorithm'. Tidak terdapat kesalahan sintaks yang signifikan.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nprogram MatrixMultiplication\ndictionary\n\u00a0 \u00a0 m, n, p : integer\n\u00a0 \u00a0 i, j, k : integer\n\u00a0 \u00a0 A : array [1..100][1..100] of integer\n\u00a0 \u00a0 B : array [1..100][1..100] of integer\n\u00a0 \u00a0 C : array [1..100][1..100] of integer\n\nalgorithm\n\u00a0 \u00a0 input m, n\n\n\u00a0 \u00a0 for i = 1 to m do\n\u00a0 \u00a0 \u00a0 \u00a0 for j = 1 to n do\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 input A[i][j]\n\u00a0 \u00a0 \u00a0 \u00a0 endfor\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 input n, p\n\n\u00a0 \u00a0 for i = 1 to n do\n\u00a0 \u00a0 \u00a0 \u00a0 for j = 1 to p do\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 input B[i][j]\n\u00a0 \u00a0 \u00a0 \u00a0 endfor\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 for i = 1 to m do\n\u00a0 \u00a0 \u00a0 \u00a0 for j = 1 to p do\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 C[i][j] &lt;- 0\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 for k = 1 to n do\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 C[i][j] &lt;- C[i][j] + (A[i][k] * B[k][j])\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 endfor\n\u00a0 \u00a0 \u00a0 \u00a0 endfor\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 for i = 1 to m do\n\u00a0 \u00a0 \u00a0 \u00a0 for j = 1 to p do\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 print C[i][j]\n\u00a0 \u00a0 \u00a0 \u00a0 endfor\n\u00a0 \u00a0 endfor\n\nendprogram"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":true,"syntax_feedback":"Struktur pseudo-code sudah benar. Semua elemen yang diperlukan sudah ada, termasuk deklarasi 'dictionary' dan bagian 'algorithm'. Tidak terdapat kesalahan sintaks yang signifikan."}
+
+LOGIC RESULT:
+{"mark":1.0,"logic_feedback":"Logika program yang disajikan sudah benar untuk melakukan perkalian matriks. Pertama, program menerima input dimensi dan elemen-elemen dari matriks A dan B dengan ukuran yang tepat untuk memungkinkan perkalian. Kemudian, hasil perkalian matriks dihitung dan disimpan di matriks C dengan menginisialisasi elemen menjadi nol dan menjumlahkan hasil perkalian elemen yang bersesuaian. Akhirnya, hasil matriks C dicetak. Tidak terdapat kesalahan dalam logika algoritme yang disajikan."}
+
+----------------------------

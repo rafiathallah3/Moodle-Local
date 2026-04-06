@@ -69,12 +69,12 @@ def get_image_mimetype(image_path):
     return mime_type
 
 
-def ocr_gemini(image_path, api_key):
+def ocr_langchain(image_path, api_key):
     """
-    Extract text from an image using Gemini 2.5 Flash vision.
+    Extract text from an image using OpenAI gpt-4o vision via LangChain.
     Returns the extracted text string, or the fallback message if no text found.
     """
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_openai import ChatOpenAI
     from langchain_core.messages import SystemMessage, HumanMessage
 
     mime_type = get_image_mimetype(image_path)
@@ -82,11 +82,11 @@ def ocr_gemini(image_path, api_key):
     with open(image_path, "rb") as f:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=api_key,
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        openai_api_key=api_key,
         temperature=0,
-        max_output_tokens=4096
+        max_tokens=4096
     )
 
     instruction = (
@@ -123,7 +123,7 @@ def ocr_gemini(image_path, api_key):
         error_msg = str(e)
         if "SAFETY" in error_msg.upper():
             return "Text not found inside the image."
-        raise Exception(f"LangChain Gemini OCR error: {error_msg}")
+        raise Exception(f"LangChain OpenAI OCR error: {error_msg}")
 
 
 def ocr_openai(image_path, api_key):
@@ -218,9 +218,9 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="gemini",
+        default="openai",
         choices=["gemini", "openai"],
-        help="AI model to use for OCR (default: gemini)",
+        help="AI model to use for OCR (default: openai)",
     )
 
     args = parser.parse_args()
@@ -272,8 +272,11 @@ def main():
     try:
         start_time = time.time()
 
-        if args.model == "gemini":
-            text = ocr_gemini(args.image, gemini_api)
+        if args.model == "gemini" or args.model == "openai":
+            # For now, both options use OpenAI gpt-4o (one via LangChain, one via cURL)
+            # but we'll prefer the LangChain one if they chose gemini (legacy) or just use openai.
+            # Actually, let's just make it simple:
+            text = ocr_langchain(args.image, openai_api)
         elif args.model == "openai":
             text = ocr_openai(args.image, openai_api)
         else:

@@ -15,7 +15,7 @@ import json
 import os
 import sys
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 
@@ -37,16 +37,16 @@ def load_env():
 
 
 def generate_questions(
-    theme: str, section: str, course: str, count: int, api_key: str
+    theme: str, section: str, course: str, count: int, api_key: str, lang: str = "English"
 ) -> list[dict]:
     """
     Generate essay-type questions using Gemini 2.5 Flash.
 
     Returns a list of dicts with 'name' and 'text' keys.
     """
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=api_key,
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        openai_api_key=api_key,
         temperature=0.8,
     )
 
@@ -59,8 +59,20 @@ def generate_questions(
         "- Questions should be practical and test understanding of the given topic.\n"
         "- Vary the difficulty across the questions (some easier, some harder).\n"
         "- Question names should be short and descriptive (max 8 words).\n"
-        "- Question text should use bold (**text**) for emphasis on key terms.\n\n"
-        "Your response MUST be a valid JSON array of objects, each with:\n"
+        "- Question text should use bold (**text**) for emphasis on key terms.\n"
+    )
+
+    # Add language instruction
+    if lang and lang.lower() != "english":
+        system_prompt += (
+            f"\n**IMPORTANT LANGUAGE INSTRUCTION**: You MUST write ALL question names and question text "
+            f"entirely in **{lang}**. Do NOT use English for the question content. "
+            f"The Input/Output labels and all instructions must also be in {lang}. "
+            f"Only the JSON keys (\"name\", \"text\") remain in English.\n"
+        )
+    
+    system_prompt += (
+        "\nYour response MUST be a valid JSON array of objects, each with:\n"
         '- "name": a short title for the question\n'
         '- "text": the full question text with Input/Output specification\n\n'
         "Example output:\n"
@@ -83,6 +95,9 @@ def generate_questions(
         f"Format: Students must write pseudocode or a program with clear input/output."
     )
 
+    if lang and lang.lower() != "english":
+        user_prompt += f"\n\n**Write all questions entirely in {lang}.**"
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_prompt),
@@ -101,6 +116,19 @@ def generate_questions(
                 valid.append({"name": q["name"], "text": q["text"]})
         return valid
 
+    # --- DEBUG LOGGING ---
+    try:
+        debug_path = os.path.join(os.path.dirname(__file__), "debug_generate_question.log")
+        with open(debug_path, "a", encoding="utf-8") as df:
+            df.write(f"--- DEBUG GENERATE QUESTION RUN ---\n")
+            df.write(f"Raw Lang: {lang}\n")
+            df.write(f"SYSTEM PROMPT:\n{system_prompt}\n\n")
+            df.write(f"USER PROMPT:\n{user_prompt}\n\n")
+            df.write(f"SYSTEM RESULT:\n{raw}\n\n")
+            df.write("----------------------------\n")
+    except Exception:
+        pass
+    # ---------------------
     raise ValueError(f"Failed to parse AI response as question array: {raw[:200]}")
 
 
@@ -138,14 +166,17 @@ def main():
     parser.add_argument(
         "--count", type=int, default=1, help="Number of questions to generate"
     )
+    parser.add_argument(
+        "--lang", default="English", help="Language for the generated questions (e.g., Indonesian, English, Japanese)"
+    )
 
     args = parser.parse_args()
 
     load_env()
 
-    gemini_api = os.environ.get("GEMINI_API")
-    if not gemini_api:
-        print(json.dumps({"status": "error", "message": "GEMINI_API missing in .env"}))
+    openai_api = os.environ.get("OPENAI_API")
+    if not openai_api:
+        print(json.dumps({"status": "error", "message": "OPENAI_API missing in .env"}))
         sys.exit(1)
 
     try:
@@ -154,12 +185,12 @@ def main():
             section=args.section,
             course=args.course,
             count=args.count,
-            api_key=gemini_api,
+            api_key=openai_api,
+            lang=args.lang,
         )
         print(
             json.dumps(
-                {"status": "success", "questions": questions},
-                ensure_ascii=False,
+                {"status": "success", "questions": questions}
             )
         )
     except Exception as e:

@@ -59,3 +59,14 @@ To minimize API costs and improve performance, results are often cached in Moodl
 | `admin/cli/` | Command-line scripts for batch/background processing. |
 | `local/orchestrator/` | Shared logic for evaluation and events (Quality Gate). |
 | `public/course/format/templates/local/` | Mustache templates for AI-enhanced UI components (e.g., Chatbot). |
+
+# Comparing Standard Pseudo Code
+Create 2 agent to score Quiz or assignment. One for checking the syntax, other is the logic. Add Pseudo Code instruction.
+
+2 Options:
+Indonesian Language and also English Language.
+Also imply to Personal Quiz.
+
+Add 2 types of quiz or assignment, one that can access the AI chat and other the serious one. If I can access the AI Chat, it should be able to look at the students' code and get the hint.
+
+Add type of assignment that can add more students' assignments by lecturer or lecturer assistant 

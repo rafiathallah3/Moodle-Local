@@ -54,13 +54,12 @@ class observer
             $submission_data
         );
 
-        // Execute adhoc task for AI Diagnosis grading synchronously
+        // Execute adhoc task for AI Diagnosis grading synchronously.
         try {
             $task = new \local_orchestrator\task\diagnose_assign_submission_task();
-            $task->set_custom_data(['submissionid' => $submissionid, 'assignid' => $assignid]);
+            $task->set_custom_data((object)['submissionid' => $submissionid, 'assignid' => $assignid]);
             $task->execute();
         } catch (\Exception $e) {
-            // Log it but don't break the submission
             debugging('Error executing AI Diagnosis: ' . $e->getMessage());
         }
     }
@@ -104,13 +103,12 @@ class observer
                 ['text' => $submission_text]
             );
 
-            // Execute adhoc task for AI Diagnosis grading synchronously
+            // Execute adhoc task for AI Diagnosis grading synchronously.
             try {
                 $task = new \local_orchestrator\task\diagnose_quiz_attempt_task();
-                $task->set_custom_data(['attemptid' => $attemptid]);
+                $task->set_custom_data((object)['attemptid' => $attemptid]);
                 $task->execute();
             } catch (\Exception $e) {
-                // Log it but don't break the submission
                 debugging('Error executing AI Diagnosis: ' . $e->getMessage());
             }
 

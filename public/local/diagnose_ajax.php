@@ -45,7 +45,12 @@ if ($stepdata) {
 }
 
 $diag_html = '';
-$clean_text = trim(strip_tags($responsetext));
+// Convert HTML line breaks and block-level tags to newlines BEFORE stripping,
+// so pseudo-code structure (program/dictionary/algorithm) is preserved.
+$text_with_newlines = preg_replace('/<br\s*\/?>/i', "\n", $responsetext);
+$text_with_newlines = preg_replace('/<\/(p|div|li|tr|h[1-6])>/i', "\n", $text_with_newlines);
+$text_with_newlines = preg_replace('/&nbsp;/i', ' ', $text_with_newlines);
+$clean_text = trim(strip_tags($text_with_newlines));
 if ($clean_text !== '' || $mediafile) {
     $tempdir = make_request_directory();
 
@@ -67,6 +72,17 @@ if ($clean_text !== '' || $mediafile) {
         $script_path = dirname($CFG->dirroot) . '/admin/cli/diagnose.py';
     }
 
+    // Get the student's language preference (not the grader's).
+    // Look up the quiz attempt that owns this question usage to find the student's userid.
+    $language_code = 'en'; // fallback
+    $student_attempt = $DB->get_record('quiz_attempts', ['uniqueid' => $usageid], 'userid');
+    if ($student_attempt && !empty($student_attempt->userid)) {
+        $student_user = $DB->get_record('user', ['id' => $student_attempt->userid], 'lang');
+        if ($student_user && !empty($student_user->lang)) {
+            $language_code = $student_user->lang;
+        }
+    }
+
     $command = "python " . escapeshellarg($script_path);
     if ($textfilepath) {
         $command .= " --textfile " . escapeshellarg($textfilepath);
@@ -74,6 +90,7 @@ if ($clean_text !== '' || $mediafile) {
     if ($mediafilepath) {
         $command .= " --file " . escapeshellarg($mediafilepath);
     }
+    $command .= " --language " . escapeshellarg($language_code);
     $command .= " 2>&1";
 
     $output_json = shell_exec($command);
@@ -124,12 +141,14 @@ if ($clean_text !== '' || $mediafile) {
             }
 
             $diagnosis = htmlspecialchars($result['diagnosis']);
-            // Convert **text** to <h2>text</h2>
+            // Convert **text** to <strong>text</strong>
             $diagnosis = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $diagnosis);
             // Convert newlines to breaks
             $diagnosis = nl2br($diagnosis);
 
-            echo json_encode(['status' => 'success', 'diagnosis' => $diagnosis]);
+            $mark = isset($result['mark']) ? (float)$result['mark'] : null;
+
+            echo json_encode(['status' => 'success', 'diagnosis' => $diagnosis, 'mark' => $mark]);
         } else if ($result && isset($result['message'])) {
             echo json_encode(['status' => 'error', 'message' => htmlspecialchars($result['message'])]);
         } else {
