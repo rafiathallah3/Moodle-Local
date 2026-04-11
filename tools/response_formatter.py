@@ -56,6 +56,10 @@ class ResponseFormatter:
         # TAMBAHAN: Motivational Layer berdasarkan progress
         response = self._add_motivational_layer(state, response)
         
+        # TAMBAHAN: Learning Style Recommendations
+        if state.get("style_adapted") and state.get("learning_recommendations"):
+            response["learning_tips"] = state["learning_recommendations"]
+        
         state["final_response"] = response
         state["next_node"] = "__end__"
         return state

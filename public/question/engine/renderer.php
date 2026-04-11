@@ -267,10 +267,11 @@ class core_question_renderer extends plugin_renderer_base
         }
 
         // ── Image OCR Section ────────────────────────────────────────────────────
-        // Mirrors the audio transcription block above: if the student attached an
-        // image file, inject a panel that calls ocr_ajax.php and displays the
-        // extracted text (or "Text not found inside the image." if none is found).
-        if ($imagefile !== null) {
+        // Only show OCR when the student submitted an IMAGE without also typing
+        // text.  If there is already a text response the extracted-text panel is
+        // redundant and confusing.
+        $has_text_response = trim(strip_tags($responsetext)) !== '';
+        if ($imagefile !== null && !$has_text_response) {
             $ocr_container_id =
                 "ocr-container-" . $qa->get_usage_id() . "-" . $qa->get_slot();
 

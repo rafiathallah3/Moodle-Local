@@ -77,5 +77,13 @@ class MoodleAdapter:
                 "questions": c.questions,
                 "mode": c.metadata.get("mode", "unknown")
             }
+            
+        # Merge formatter extras (motivational layer, learning tips)
+        if state.get("final_response"):
+            final = state["final_response"]
+            if "motivational_message" in final:
+                response["motivational_message"] = final["motivational_message"]
+            if "learning_tips" in final:
+                response["learning_tips"] = final["learning_tips"]
         
         return response

@@ -65,7 +65,7 @@ class CompiledGraph:
                 break
             
             state["nodes_visited"].append(current)
-            print(f"[Graph] → {current}")
+            print(f"[Graph] -> {current}")
             
             # Execute node
             try:
@@ -86,7 +86,7 @@ class CompiledGraph:
                 cond = self.conditional_edges[current]
                 result_key = cond["condition"](state)
                 next_node = cond["paths"].get(result_key, END)
-                print(f"[Graph] Conditional: {result_key} → {next_node}")
+                print(f"[Graph] Conditional: {result_key} -> {next_node}")
             # 3. Check static edges
             elif current in self.edges:
                 candidates = self.edges[current]

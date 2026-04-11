@@ -72,7 +72,7 @@ class OrchestratorAgent:
         next_node = route_map.get(intent, "lesson_generator")
         state["next_node"] = next_node
         
-        print(f"[Orchestrator] Intent: {intent.value} → {next_node} | CFF: {state.get('cff_triggered', False)}")
+        print(f"[Orchestrator] Intent: {intent.value} -> {next_node} | CFF: {state.get('cff_triggered', False)}")
         return log_action(state, "orchestrator", "routed", f"{intent.value} to {next_node}")
     
     def _check_injection(self, content: str) -> bool:
@@ -89,7 +89,7 @@ class OrchestratorAgent:
         if trigger == "analytics_request" or (role == "teacher" and "analytics" in content):
             return Intent.ANALYTICS_REQUEST
         
-        if trigger == "on_submit":
+        if trigger == "on_submit" or trigger == "diagnose":
             return Intent.SUBMISSION
         
         return Intent.CHAT

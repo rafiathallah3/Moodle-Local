@@ -121,8 +121,26 @@ def create_app(llm_config=None):
         if state.get("practice_mode") and not state.get("quiz_completed"):
             return "quiz"
         
-        # NEW: Jika ada learning style preference, adapt content
-        if state.get("detected_learning_style") and not state.get("style_adapted"):
+        # OLD: Adaptive Learning Style - ONLY trigger if student struggles (score < 70 or not correct)
+        # This approach skipped the learning_style_adapter node entirely when the
+        # student scored >= 70, which meant the JSON response never contained a
+        # "learning_tips" key.  As a result, the PHP front-end (diagnose_ajax.php)
+        # had nothing to render in the "Tips (Sesuai Gaya Belajarmu)" section —
+        # even though the student might still benefit from personalised tips on
+        # correct answers (e.g. pseudo-code formatting feedback).
+        #
+        # score_result = state.get("scoring_result")
+        # is_struggling = False
+        # if score_result and (not score_result.is_correct or score_result.score_0_100 < 70):
+        #     is_struggling = True
+        #
+        # if is_struggling and not state.get("style_adapted"):
+        #     return "adapt_style"
+
+        # NEW: Always trigger for quiz submissions so students get personalised
+        # tips regardless of score.
+        trigger = state.get("evidence", {}).get("trigger", "")
+        if trigger in ("diagnose", "on_submit") and not state.get("style_adapted"):
             return "adapt_style"
         
         return "done"
@@ -197,6 +215,12 @@ def adapt_learning_style(state, ls_agent):
     """Adapt content berdasarkan learning style"""
     user_id = state.get("user_id", "unknown")
     topic = state.get("topic", "general")
+    
+    # Try to extract topic from misconceptions if available
+    score_result = state.get("scoring_result")
+    if score_result and score_result.misconceptions:
+        # e.g., 'loops_infinite' -> 'loops'
+        topic = score_result.misconceptions[0].label.split('_')[0].lower()
     
     # Detect learning style dari behavior
     interactions = state.get("interaction_history", [])
@@ -309,15 +333,57 @@ def get_student_dashboard(user_id: str, course_id: str) -> dict:
 
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("AGENTIC MULTIMODAL AI TUTOR - AFS v2 COMPLETE")
-    print("=" * 70)
-    print("Architecture: 4 Agents + 11 Tools + Extensions")
-    print("Features:")
-    print("  ✓ Core: Orchestrator, Analyzer (Style+Logic), Critic (Summary+Introspection)")
-    print("  ✓ Practice: Problem Generator + Quiz Verifier (2-Stage)")
-    print("  ✓ Personalization: Learning Style + Student Dashboard")
-    print("  ✓ Multimodal: Fusion Agent (Text+Visual+Audio)")
-    print("  ✓ Collaboration: Peer Teaching + Teacher Refinement")
-    print("  ✓ Assessment: Bloom's Taxonomy + Motivational Layer")
-    print("=" * 70)
+    import argparse
+    import sys
+    import json
+    
+    parser = argparse.ArgumentParser(description="AMT-CS1 Agentic Process Runner")
+    parser.add_argument("--stdin", action="store_true", help="Read JSON payload from STDIN")
+    args = parser.parse_args()
+    
+    if args.stdin:
+        # Read payload from standard input (used by python_runner.php)
+        try:
+            input_json = sys.stdin.read()
+            data = json.loads(input_json)
+        except Exception as e:
+            print(json.dumps({"error": f"Failed to parse STDIN JSON: {str(e)}"}))
+            sys.exit(1)
+            
+        action = data.get("action", "run")
+        input_mode = data.get("input_mode", "moodle_evidence")
+        
+        # Extract default identifiers
+        user_id = data.get("evidence", {}).get("user_id", "unknown_user")
+        course_id = data.get("evidence", {}).get("course_id", "CS101")
+        
+        try:
+            if input_mode == "moodle_evidence":
+                evidence = data.get("evidence", {})
+                result = process_request(evidence, user_id, course_id)
+            else:
+                # Direct state manipulation or payload
+                payload = data.get("payload", {})
+                result = graph.invoke(payload)
+                
+            # Must output strictly JSON for PHP to decode
+            print(json.dumps(result))
+            
+        except Exception as e:
+            print(json.dumps({"error": f"Execution failed: {str(e)}"}))
+            sys.exit(1)
+    else:
+        # Original simple text output for local execution
+        print("=" * 70)
+        print("AGENTIC MULTIMODAL AI TUTOR - AFS v2 COMPLETE")
+        print("=" * 70)
+        print("Architecture: 4 Agents + 11 Tools + Extensions")
+        print("Features:")
+        print("  ✓ Core: Orchestrator, Analyzer (Style+Logic), Critic (Summary+Introspection)")
+        print("  ✓ Practice: Problem Generator + Quiz Verifier (2-Stage)")
+        print("  ✓ Personalization: Learning Style + Student Dashboard")
+        print("  ✓ Multimodal: Fusion Agent (Text+Visual+Audio)")
+        print("  ✓ Collaboration: Peer Teaching + Teacher Refinement")
+        print("  ✓ Assessment: Bloom's Taxonomy + Motivational Layer")
+        print("=" * 70)
+        print("Run with '--stdin' for programmatic integration with Moodle.")

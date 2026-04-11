@@ -126,10 +126,10 @@ class ReflectiveCriticAgent:
         state["critic_assessment"] = assessment
         
         if assessment.revision_needed and iteration < self.max_iterations:
-            state["next_node"] = "lesson_generator"
+            state["next_node"] = None
             print(f"[Critic] Revision needed (iter {iteration+1}): {assessment.feedback}")
         else:
-            state["next_node"] = "formatter"
+            state["next_node"] = None  # Clear it so graph conditional routing takes over
             print("[Critic] Quality check passed")
         
         return log_action(state, "critic", "assessed", f"passed={assessment.passed}")

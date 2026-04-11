@@ -66,96 +66,101 @@ if ($clean_text !== '' || $mediafile) {
         $mediafile->copy_content_to($mediafilepath);
     }
 
-    // Run the Python script to fetch the diagnosis
-    $script_path = $CFG->dirroot . '/admin/cli/diagnose.py';
-    if (!file_exists($script_path)) {
-        $script_path = dirname($CFG->dirroot) . '/admin/cli/diagnose.py';
-    }
-
-    // Get the student's language preference (not the grader's).
-    // Look up the quiz attempt that owns this question usage to find the student's userid.
+    // Get the student's language preference
     $language_code = 'en'; // fallback
+    $student_userid = 0;
     $student_attempt = $DB->get_record('quiz_attempts', ['uniqueid' => $usageid], 'userid');
     if ($student_attempt && !empty($student_attempt->userid)) {
-        $student_user = $DB->get_record('user', ['id' => $student_attempt->userid], 'lang');
+        $student_userid = $student_attempt->userid;
+        $student_user = $DB->get_record('user', ['id' => $student_userid], 'lang');
         if ($student_user && !empty($student_user->lang)) {
             $language_code = $student_user->lang;
         }
     }
 
-    $command = "python " . escapeshellarg($script_path);
-    if ($textfilepath) {
-        $command .= " --textfile " . escapeshellarg($textfilepath);
-    }
+    // Run the Python Orchestrator Graph via Bridge
+    require_once(__DIR__ . '/../../local/orchestrator/classes/python_runner.php');
+
+    // Fallback course_id if not strictly available
+    $course_id = isset($context->instanceid) ? $context->instanceid : 'CS101';
+
+    $evidence = [
+        'user_id' => (string) $student_userid,
+        'course_id' => (string) $course_id,
+        'content' => $clean_text,
+        'trigger' => 'diagnose',
+        'metadata' => [
+            'role' => 'student',
+            'assessment_id' => $usageid,
+            'slot' => $slot,
+            'language' => $language_code
+        ]
+    ];
+
     if ($mediafilepath) {
-        $command .= " --file " . escapeshellarg($mediafilepath);
+        $evidence['metadata']['media_path'] = $mediafilepath;
     }
-    $command .= " --language " . escapeshellarg($language_code);
-    $command .= " 2>&1";
 
-    $output_json = shell_exec($command);
+    $result = \local_orchestrator\python_runner::run_agentic_flow($evidence);
 
-    if ($output_json) {
-        $result = json_decode($output_json, true);
-        if ($result && isset($result['status']) && $result['status'] === 'success') {
+    if ($result && isset($result['status']) && $result['status'] === 'success') {
 
-            // Critic / Quality Gate validation
-            require_once(__DIR__ . '/../../local/orchestrator/classes/critic.php');
-            $run_id = 'DIAGNOSE-' . $usageid . '-' . $slot . '-' . time();
-            $policy = [
-                'constraints' => [
-                    'no_full_solution' => true,
-                    'hint_only' => true,
-                    'max_hint_tier' => 2,
-                    'max_revision_iters' => 1,
-                    'grounding_required' => false
-                ]
-            ];
-            $evidence = [
-                'mode' => 'diagnose',
-                'task_context' => [
-                    'usageid' => $usageid,
-                    'slot' => $slot,
-                    'contextid' => $contextid
-                ],
-                'student_submission' => $clean_text
-            ];
-            $candidate = [
-                'type' => 'feedback_only',
-                'feedback' => [$result['diagnosis']]
-            ];
+        $mark = null;
+        $diagnosis_html = '';
 
-            $critic_result = \local_orchestrator\critic::evaluate_candidate($run_id, 'diagnose', $policy, $evidence, $candidate);
+        if (isset($result['scoring'])) {
+            $scoring = $result['scoring'];
+            $mark = isset($scoring['score']) ? (float) $scoring['score'] : null;
 
-            if ($critic_result && isset($critic_result['final_verdict']) && $critic_result['final_verdict'] === 'BLOCK') {
-                $block_reasons = [];
-                $findings = $critic_result['findings'] ?? [];
-                foreach ($findings as $finding) {
-                    if (isset($finding['issue'])) {
-                        $block_reasons[] = $finding['issue'];
-                    }
+            $diagnosis_html .= "<strong>Pemeriksaan Logika:</strong><br/>";
+            $diagnosis_html .= nl2br(htmlspecialchars($scoring['summary'])) . "<br/><br/>";
+
+            if (!empty($scoring['misconceptions'])) {
+                $diagnosis_html .= "<em>Identifikasi Masalah:</em><br/>";
+                foreach ($scoring['misconceptions'] as $misc) {
+                    $diagnosis_html .= "- " . htmlspecialchars($misc) . "<br/>";
                 }
-                $reason_str = empty($block_reasons) ? 'Quality gate check failed.' : implode('; ', $block_reasons);
-                echo json_encode(['status' => 'error', 'message' => 'AI Response blocked by Quality Gate: ' . $reason_str]);
-                die();
+                $diagnosis_html .= "<br/>";
+            }
+        }
+
+        // Append learning tips if present (from Learning Style Agent)
+        if (isset($result['learning_tips']) && !empty($result['learning_tips'])) {
+            $diagnosis_html .= "<strong>&#128270; Tips (Sesuai Gaya Belajarmu):</strong><br/>";
+
+            // The tips array is nested under recommendations.tips
+            $tips_array = [];
+            if (isset($result['learning_tips']['recommendations']['tips'])) {
+                $tips_array = $result['learning_tips']['recommendations']['tips'];
+            } elseif (isset($result['learning_tips']['general_tips'])) {
+                $tips_array = $result['learning_tips']['general_tips'];
+            }
+            foreach ($tips_array as $tip) {
+                $diagnosis_html .= "- " . htmlspecialchars($tip) . "<br/>";
             }
 
-            $diagnosis = htmlspecialchars($result['diagnosis']);
-            // Convert **text** to <strong>text</strong>
-            $diagnosis = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $diagnosis);
-            // Convert newlines to breaks
-            $diagnosis = nl2br($diagnosis);
-
-            $mark = isset($result['mark']) ? (float)$result['mark'] : null;
-
-            echo json_encode(['status' => 'success', 'diagnosis' => $diagnosis, 'mark' => $mark]);
-        } else if ($result && isset($result['message'])) {
-            echo json_encode(['status' => 'error', 'message' => htmlspecialchars($result['message'])]);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Could not parse output: ' . htmlspecialchars($output_json)]);
+            // Include adaptive message from the Learning Style Agent
+            if (isset($result['learning_tips']['adaptive_message'])) {
+                $diagnosis_html .= "<br/><em>" . htmlspecialchars($result['learning_tips']['adaptive_message']) . "</em><br/>";
+            }
+            $diagnosis_html .= "<br/>";
         }
+
+        // Append motivational message
+        if (isset($result['motivational_message'])) {
+            $diagnosis_html .= "<em>" . htmlspecialchars($result['motivational_message']) . "</em>";
+        }
+
+        if (empty($diagnosis_html) && isset($result['content']['explanation'])) {
+            $diagnosis_html .= nl2br(htmlspecialchars($result['content']['explanation']));
+        }
+
+        echo json_encode(['status' => 'success', 'diagnosis' => $diagnosis_html, 'mark' => $mark]);
+
+    } else if ($result && isset($result['message'])) {
+        echo json_encode(['status' => 'error', 'message' => htmlspecialchars($result['message'])]);
     } else {
-        echo json_encode(['status' => 'error', 'message' => 'No output from diagnosis engine.']);
+        echo json_encode(['status' => 'error', 'message' => 'No output or invalid JSON from diagnosis engine.']);
     }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'No text or media file found for diagnosis.']);
