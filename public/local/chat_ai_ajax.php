@@ -221,12 +221,13 @@ if ($result['status'] !== 'success') {
 
 $tool_result = null;
 $tool_action = $result['tool_action'] ?? null;
+$generated_content = $result['generated_content'] ?? null;
 
 if ($tool_action && is_array($tool_action) && isset($tool_action['action'])) {
     if ($tool_action['action'] === 'create_quiz' && !empty($tool_action['sectionid'])) {
         $theme = $tool_action['theme'] ?? null;
         $language = $tool_action['language'] ?? 'English';
-        $tool_result = handle_create_quiz((int) $tool_action['sectionid'], $theme, $language);
+        $tool_result = handle_create_quiz((int) $tool_action['sectionid'], $theme, $language, $generated_content);
     }
 }
 
@@ -260,7 +261,7 @@ if ($tool_result !== null) {
             $theme = $parsed['theme'] ?? null;
             $language = $parsed['language'] ?? 'English';
             if (!empty($sectionid)) {
-                $tool_result = handle_create_quiz((int) $sectionid, $theme, $language);
+                $tool_result = handle_create_quiz((int) $sectionid, $theme, $language, $generated_content);
                 $response['tool_result'] = $tool_result;
             } else {
                 $response['message'] .= "\n\n*(System Debug): Tool action string decoded, but sectionid is missing: " . $tool_action . "*";
@@ -288,7 +289,7 @@ echo json_encode($response, JSON_UNESCAPED_UNICODE);
  * @param int $sectionid  The course section ID.
  * @param string|null $theme  Optional topic/theme for the quiz (e.g., "sorting algorithms").
  */
-function handle_create_quiz(int $sectionid, ?string $theme = null, string $language = 'English'): array
+function handle_create_quiz(int $sectionid, ?string $theme = null, string $language = 'English', ?array $generated_content = null): array
 {
     global $DB, $USER, $CFG;
 
@@ -403,10 +404,10 @@ function handle_create_quiz(int $sectionid, ?string $theme = null, string $langu
 
         $questions_added = false;
 
-        if ($theme || strcasecmp($language, 'English') !== 0) {
-            // THEMED OR LOCALIZED QUIZ: Search for questions matching the theme, or generate new ones.
+        if ($generated_content || $theme || strcasecmp($language, 'English') !== 0) {
+            // THEMED, LOCALIZED, OR PRE-GENERATED QUIZ: use agent content or generate new questions.
             $search_theme = $theme ?: (!empty($sectionname) ? $sectionname : 'General Concepts');
-            $questions_added = handle_themed_questions($result->instance, $course, $section, $search_theme, $adminuser, $language);
+            $questions_added = handle_themed_questions($result->instance, $course, $section, $search_theme, $adminuser, $language, $generated_content);
         }
 
         if (!$questions_added) {
@@ -478,9 +479,37 @@ function handle_create_quiz(int $sectionid, ?string $theme = null, string $langu
  * @param object $adminuser  The admin user for capability checks.
  * @return bool  True if questions were successfully added.
  */
-function handle_themed_questions(int $quizinstance, object $course, object $section, string $theme, object $adminuser, string $language = 'English'): bool
+function handle_themed_questions(int $quizinstance, object $course, object $section, string $theme, object $adminuser, string $language = 'English', ?array $generated_content = null): bool
 {
     global $DB, $CFG;
+
+    // 0. If pre-generated content from LessonGeneratorAgent is available, use it directly.
+    //    This skips the second Python call to generate_questions.py entirely.
+    if (!empty($generated_content) && !empty($generated_content['questions'])) {
+        $categoryid = get_or_create_theme_category($course, $theme);
+        if ($categoryid) {
+            $question_ids = [];
+            foreach ($generated_content['questions'] as $qdata) {
+                if (!empty($qdata['name']) && !empty($qdata['text'])) {
+                    // Append skeleton code to question text if available
+                    $qtext = $qdata['text'];
+                    if (!empty($generated_content['skeleton_code'])) {
+                        $qtext .= '<br><br><strong>Skeleton Code:</strong><pre>' 
+                            . htmlspecialchars($generated_content['skeleton_code']) . '</pre>';
+                    }
+                    $qid = insert_essay_question($categoryid, $qdata['name'], $qtext);
+                    if ($qid) {
+                        $question_ids[] = $qid;
+                    }
+                }
+            }
+            if (!empty($question_ids)) {
+                return add_questions_to_quiz($quizinstance, $question_ids);
+            }
+        }
+        // Fall through to existing logic if pre-generated insertion failed
+        error_log('[handle_themed_questions] Pre-generated content insertion failed, falling back to existing logic.');
+    }
 
     // 1. Search for existing questions matching the theme in this course's question banks.
     // We skip this if language is not English, to force generation of localized questions.

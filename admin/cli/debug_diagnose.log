@@ -926,3 +926,450 @@ LOGIC RESULT:
 {"mark":1.0,"logic_feedback":"Logika dari jawaban sudah benar, menggunakan rumus konversi yang tepat untuk mengubah suhu dari Celcius ke Fahrenheit, dan hasil output sudah sesuai dengan format yang diminta yaitu dua angka di belakang koma. Tidak ada kesalahan logika dalam implementasi ini."}
 
 ----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: id | Resolved Lang Name: Indonesian
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in Indonesian.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in Indonesian.
+
+Question/Assignment Description:
+Buatlah program yang mengkonversi suhu dari Celcius ke Fahrenheit.
+
+**Input:** Sebuah bilangan bulat yang mewakili suhu dalam derajat Celcius.
+
+**Output:** Sebuah bilangan desimal yang mewakili suhu yang telah dikonversi ke Fahrenheit dengan dua angka di belakang koma.
+
+Gunakan rumus konversi: Fahrenheit = (Celcius * 9/5) + 32.
+
+--- Syntax Agent Feedback ---
+Is Valid: True
+Feedback: Pseudo-code tersebut sudah benar menurut aturan yang diberikan. Tidak ada kesalahan struktur atau sintaks yang ditemukan.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nprogram KonversiSuhu\n\ndictionary\n\u00a0 \u00a0 celcius : integer\n\u00a0 \u00a0 fahrenheit : real\n\nalgorithm\n\u00a0 \u00a0 read(celcius)\n\u00a0 \u00a0 fahrenheit &lt;- (celcius * 9/5) + 32\n\u00a0 \u00a0 write(fahrenheit:0:2)\n\nendprogram"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":true,"syntax_feedback":"Pseudo-code tersebut sudah benar menurut aturan yang diberikan. Tidak ada kesalahan struktur atau sintaks yang ditemukan."}
+
+LOGIC RESULT:
+{"mark":1.0,"logic_feedback":"Logika dalam program sudah benar. Program membaca suhu dalam Celcius, menggunakan rumus konversi yang tepat untuk mengubahnya menjadi Fahrenheit, dan outputnya diatur dengan dua angka di belakang koma. Tidak ada kesalahan logika yang ditemukan."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+Question/Assignment Description:
+Create a pseudocode function named 'findMax' that takes an array 'arr' and returns the largest element in it.
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code is missing a 'program [Name]' declaration at the beginning and an 'endprogram' at the end.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nfunction findMax(arr)\n\ndictionary\n\u00a0 \u00a0 i : integer\n\u00a0 \u00a0 max : integer\n\nalgorithm\n\u00a0 \u00a0 max &lt;- arr[0]\n\u00a0 \u00a0 for i &lt;- 1 to length(arr) - 1 do\n\u00a0 \u00a0 \u00a0 \u00a0 if arr[i] &gt; max then\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 max &lt;- arr[i]\n\u00a0 \u00a0 \u00a0 \u00a0 endif\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 return max\n\nendfunction"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code is missing a 'program [Name]' declaration at the beginning and an 'endprogram' at the end."}
+
+LOGIC RESULT:
+{"mark":1.0,"logic_feedback":"The logic for finding the maximum element in an array is correct. The function initializes a variable 'max' to the first element of the array and then iterates through the array, updating 'max' whenever it finds a larger element. This approach correctly identifies the largest element."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+Question/Assignment Description:
+📝 Practice ProblemPractice problem for general💻 Skeleton Codedef practice_general():
+    passWrite your solution as pseudocode or a program in the editor below.
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code is missing the required 'program [Name]' at the start and 'endprogram' at the end. These are crucial for the structural integrity of the code.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nfunction findMax(arr)\n\ndictionary\n\u00a0 \u00a0 i : integer\n\u00a0 \u00a0 max : integer\n\nalgorithm\n\u00a0 \u00a0 max &lt;- arr[0]\n\u00a0 \u00a0 for i &lt;- 1 to length(arr) - 1 do\n\u00a0 \u00a0 \u00a0 \u00a0 if arr[i] &gt; max then\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 max &lt;- arr[i]\n\u00a0 \u00a0 \u00a0 \u00a0 endif\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 return max\n\nendfunction"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code is missing the required 'program [Name]' at the start and 'endprogram' at the end. These are crucial for the structural integrity of the code."}
+
+LOGIC RESULT:
+{"mark":0.9,"logic_feedback":"The student's algorithm is correctly designed to find the maximum value in an array. It initializes 'max' with the first element of the array and then iterates through the array comparing each element to 'max', updating 'max' when a larger element is found. The logic is sound. However, there are syntax issues noted by the Syntax Agent, such as missing 'program' and 'endprogram' statements, which are important for the structural integrity of pseudocode. While these do not directly impact the logical correctness, they are crucial for a complete and correct submission."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+Question/Assignment Description:
+Buatlah program yang mengkonversi suhu dari Celcius ke Fahrenheit.
+
+**Input:** Sebuah bilangan bulat yang mewakili suhu dalam derajat Celcius.
+
+**Output:** Sebuah bilangan desimal yang mewakili suhu yang telah dikonversi ke Fahrenheit dengan dua angka di belakang koma.
+
+Gunakan rumus konversi: Fahrenheit = (Celcius * 9/5) + 32.
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code must start with 'program [Name]' and end with 'endprogram'. Currently, the code does not have these statements.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nfunction findMax(arr)\n\ndictionary\n\u00a0 \u00a0 i : integer\n\u00a0 \u00a0 max : integer\n\nalgorithm\n\u00a0 \u00a0 max &lt;- arr[0]\n\u00a0 \u00a0 for i &lt;- 1 to length(arr) - 1 do\n\u00a0 \u00a0 \u00a0 \u00a0 if arr[i] &gt; max then\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 max &lt;- arr[i]\n\u00a0 \u00a0 \u00a0 \u00a0 endif\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 return max\n\nendfunction"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code must start with 'program [Name]' and end with 'endprogram'. Currently, the code does not have these statements."}
+
+LOGIC RESULT:
+{"mark":0.0,"logic_feedback":"The logic provided is for finding the maximum value in an array, which is unrelated to converting Celsius to Fahrenheit. The task requires reading an integer input representing Celsius, applying the conversion formula Fahrenheit = (Celsius * 9/5) + 32, and outputting the result as a decimal with two decimal places. The logic for the conversion task was not attempted or addressed in the student's code."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+Question/Assignment Description:
+Buatlah program yang mengkonversi suhu dari Celcius ke Fahrenheit.
+
+**Input:** Sebuah bilangan bulat yang mewakili suhu dalam derajat Celcius.
+
+**Output:** Sebuah bilangan desimal yang mewakili suhu yang telah dikonversi ke Fahrenheit dengan dua angka di belakang koma.
+
+Gunakan rumus konversi: Fahrenheit = (Celcius * 9/5) + 32.
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code is missing the required 'program [Name]' declaration at the start and 'endprogram' at the end.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nfunction findMax(arr)\n\ndictionary\n\u00a0 \u00a0 i : integer\n\u00a0 \u00a0 max : integer\n\nalgorithm\n\u00a0 \u00a0 max &lt;- arr[0]\n\u00a0 \u00a0 for i &lt;- 1 to length(arr) - 1 do\n\u00a0 \u00a0 \u00a0 \u00a0 if arr[i] &gt; max then\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 max &lt;- arr[i]\n\u00a0 \u00a0 \u00a0 \u00a0 endif\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 return max\n\nendfunction"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code is missing the required 'program [Name]' declaration at the start and 'endprogram' at the end."}
+
+LOGIC RESULT:
+{"mark":0.0,"logic_feedback":"The logic presented does not address the problem of converting Celsius to Fahrenheit. Instead, it is an algorithm to find the maximum value in an array. The solution should focus on using the conversion formula Fahrenheit = (Celsius * 9/5) + 32 and provide implementation as described in the problem statement."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+Question/Assignment Description:
+Buatlah program yang mengkonversi suhu dari Celcius ke Fahrenheit.
+
+**Input:** Sebuah bilangan bulat yang mewakili suhu dalam derajat Celcius.
+
+**Output:** Sebuah bilangan desimal yang mewakili suhu yang telah dikonversi ke Fahrenheit dengan dua angka di belakang koma.
+
+Gunakan rumus konversi: Fahrenheit = (Celcius * 9/5) + 32.
+
+--- Syntax Agent Feedback ---
+Is Valid: True
+Feedback: The pseudo-code is structurally correct. It starts with 'program [Name]', includes a 'dictionary' section for declarations, contains an 'algorithm' section where the main logic is implemented, and ends with 'endprogram'.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nprogram KonversiSuhu\n\ndictionary\n\u00a0 \u00a0 celcius : integer\n\u00a0 \u00a0 fahrenheit : real\n\nalgorithm\n\u00a0 \u00a0 read(celcius)\n\u00a0 \u00a0 fahrenheit &lt;- (celcius * 9/5) + 32\n\u00a0 \u00a0 write(fahrenheit:0:2)\n\nendprogram"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":true,"syntax_feedback":"The pseudo-code is structurally correct. It starts with 'program [Name]', includes a 'dictionary' section for declarations, contains an 'algorithm' section where the main logic is implemented, and ends with 'endprogram'."}
+
+LOGIC RESULT:
+{"mark":1.0,"logic_feedback":"The student's algorithm correctly implements the conversion from Celsius to Fahrenheit. The formula used (Fahrenheit = (Celsius * 9/5) + 32) is accurate, and the output is formatted to two decimal places as required. The code handles input and output as specified in the problem statement. Well done!"}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+Question/Assignment Description:
+You are tasked with creating a function that takes a list of integers and returns a new list containing only the even numbers from the original list. Your function should maintain the original order of the numbers.Skeleton Code:def filter_even_numbers(numbers):
+    # Your code here
+    return []
+
+--- Syntax Agent Feedback ---
+Is Valid: False
+Feedback: The pseudo-code is missing the required 'program [Name]' at the start and 'endprogram' at the end.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nfunction filterEven(arr)\n\ndictionary\n\u00a0 \u00a0 i : integer\n\u00a0 \u00a0 result : array of integer\n\nalgorithm\n\u00a0 \u00a0 result &lt;- []\n\n\u00a0 \u00a0 for i &lt;- 0 to length(arr) - 1 do\n\u00a0 \u00a0 \u00a0 \u00a0 if arr[i] mod 2 = 0 then\n\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 append(result, arr[i])\n\u00a0 \u00a0 \u00a0 \u00a0 endif\n\u00a0 \u00a0 endfor\n\n\u00a0 \u00a0 return result\n\nendfunction"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":false,"syntax_feedback":"The pseudo-code is missing the required 'program [Name]' at the start and 'endprogram' at the end."}
+
+LOGIC RESULT:
+{"mark":1.0,"logic_feedback":"The logic in the student's answer is correct. The function iterates through the input list and checks each element to see if it is even, i.e., the remainder when divided by 2 is 0. If it is even, it appends the number to the result list. This successfully filters only the even numbers while maintaining the original order."}
+
+----------------------------
+--- DEBUG DIAGNOSE RUN ---
+Raw Lang: en | Resolved Lang Name: English
+SYNTAX PROMPT:
+You are an AI Syntax Checker Agent for pseudo-code.
+Here are the pseudo-code grammar rules you MUST check for:
+1. MUST start with 'program [Name]'.
+2. MUST end with 'endprogram'.
+3. MAY contain a 'dictionary' (or 'kamus') section for variable declarations. If present, it must be labeled 'dictionary' or 'kamus'.
+4. MAY contain 'function' or 'procedure' blocks. These can appear after 'dictionary' and before 'algorithm'.
+5. MUST contain an 'algorithm' (or 'algoritma') section where the main logic starts.
+6. The assignment operator is `<-`. (Do NOT flag this as incorrect).
+
+IMPORTANT:
+- Never claim 'dictionary' or 'algorithm' is missing if the word is explicitly written in the pseudo-code.
+- Do NOT be confused by 'function' declarations existing outside the main algorithm.
+- Output your feedback in plain text without HTML tags (no <br>, <strong>, etc).
+- Do not evaluate logical correctness, only focus on structural grammar and syntax.
+- TRANSLATION REQUIREMENT: You MUST write your 'syntax_feedback' strictly in English.
+
+LOGIC PROMPT:
+You are an AI Logic Checker Agent tasked with evaluating a student's answer and assigning a score.
+Please evaluate the logical correctness of the response inside the 'algorithm' block and determine a score for the student's answer out of a maximum of 1.0.
+Keep your diagnosis concise, helpful, and constructive. You will receive the Syntax Agent's feedback to help factor any severe syntax errors into your grading.
+Keep your output in plain text. Do NOT use HTML tags such as <br> or <strong>.
+TRANSLATION REQUIREMENT: You MUST write your 'logic_feedback' strictly in English.
+
+Question/Assignment Description:
+Write a program that takes a list of numbers and calculates the sum and average of those numbers. The program should be able to handle any number of inputs and should output both the sum and the average. The inputs will be provided as a list, and you must ensure to handle cases where the list is empty.Skeleton Code:program SumAndAverage
+
+    dictionary
+        numbers: list of integer
+        sum: integer
+        average: real
+        count: integer
+    enddictionary
+
+    procedure calculateSumAndAverage(numbers: list of integer) 
+        sum &lt;- 0
+        count &lt;- length of numbers
+        for each number in numbers do
+            sum &lt;- sum + number
+        endfor
+        if count &gt; 0 then
+            average &lt;- sum / count
+        else
+            average &lt;- 0
+        endif
+    endprocedure
+
+    algorithm
+        input numbers
+        call calculateSumAndAverage(numbers)
+        output sum, average
+    endalgorithm
+
+endprogram
+
+--- Syntax Agent Feedback ---
+Is Valid: True
+Feedback: The pseudo-code is well-structured and follows the required syntax rules.
+
+
+HUMAN CONTENT:
+[
+  {
+    "type": "text",
+    "text": "Student Text Answer:\nprogram SumAndAverage\n\n    dictionary\n        numbers: list of integer\n        sum: integer\n        average: real\n        count: integer\n    enddictionary\n\n    procedure calculateSumAndAverage(numbers: list of integer) \n        sum &lt;- 0\n        count &lt;- length of numbers\n        for each number in numbers do\n            sum &lt;- sum + number\n        endfor\n        if count &gt; 0 then\n            average &lt;- sum / count\n        else\n            average &lt;- 0\n        endif\n    endprocedure\n\n    algorithm\n        input numbers\n        call calculateSumAndAverage(numbers)\n        output sum, average\n    endalgorithm\n\nendprogram"
+  }
+]
+
+SYNTAX RESULT:
+{"is_valid":true,"syntax_feedback":"The pseudo-code is well-structured and follows the required syntax rules."}
+
+LOGIC RESULT:
+{"mark":1.0,"logic_feedback":"The student's algorithm logically calculates the sum and average of a list of numbers. It correctly handles both non-empty and empty lists by assigning an average of zero in the case of an empty list. The procedure iterates through the list to compute the sum, then calculates the average if the list contains elements, fulfilling all requirements of the task."}
+
+----------------------------

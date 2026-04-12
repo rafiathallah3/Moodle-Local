@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "00_Project_Overview/Overview.md",
+                "file": "00_Project_Overview/Project_Overview.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Overview"
+              "title": "Project_Overview"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "00_Project_Overview/Overview.md",
+                "file": "01_Agent_Core/Agent_Integration_Plan.md",
                 "collapseAll": true,
                 "extraContext": true,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Overview"
+              "title": "Backlinks for Agent_Integration_Plan"
             }
           },
           {
@@ -185,36 +185,39 @@
   },
   "active": "5b6e714f2fd8796c",
   "lastOpenFiles": [
+    "README.md",
+    "03_Research_Theory/_INDEX.md",
+    "02_Features/_INDEX.md",
+    "01_Agent_Core/_INDEX.md",
+    "00_Project_Overview/_INDEX.md",
+    "01_Agent_Core/Moodle_Integration_Plan.md",
+    "01_Agent_Core/Quiz_and_Grading_System.md",
+    "01_Agent_Core/Evaluation_System.md",
+    "00_Project_Overview/System_Architecture_and_User_Flow.md",
+    "00_Project_Overview/Project_Overview.md",
+    "01_Agent_Core/Reflective_Critic_Agent.md",
+    "03_Research_Theory/KC_Graph_MAS-KCL.md",
+    "02_Features/Assignment_Submission.md",
+    "00_Project_Overview/System_Overview_and_User_Flow.md",
+    "01_Agent_Core/Agentic_Quiz_System.md",
+    "02_Features/Personal_Quiz_System.md",
+    "01_Agent_Core/Agentic_Evaluation_System.md",
+    "02_Features/Transcription.md",
+    "00_Project_Overview/Overview.md",
+    "01_Agent_Core/Agentic_Tools_Guide.md",
+    "01_Agent_Core/Agent_Integration_Plan.md",
     "00_Project_Overview/Master Overview.md",
     "Untitled.canvas",
-    "00_Project_Overview/Overview.md",
     "02_Features/AI_Diagnosis.md",
     "Untitled",
     "03_Research_Theory/KC Graph.md",
-    "02_Features/Transcription.md",
     "02_Features/OCR.md",
     "02_Features/Assignments Submission.md",
-    "02_Features/AI_Chatbot.md",
-    "Agentic_Tools_Guide.md",
-    "01_Agent_Core/Agentic_Tools_Guide.md",
-    "01_Agent_Core/Agent_Integration_Plan.md",
     "03_Research_Theory",
     "02_Features",
     "01_Agent_Core",
     "00_Project_Overview",
-    "Study_Planner.md",
-    "Master Overview.md",
-    "Agent_Integration_Plan.md",
-    "Overview.md",
-    "OCR.md",
-    "AI_Diagnosis.md",
-    "KC Graph.md",
-    "Assignments Submission.md",
-    "Transcription.md",
-    "AI_Chatbot.md",
     "Untitled.base",
-    "Moodle/To-Do di Moodle.md",
-    "Moodle",
-    "Untitled 1.md"
+    "Moodle"
   ]
 }

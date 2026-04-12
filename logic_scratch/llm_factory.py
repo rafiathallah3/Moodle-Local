@@ -34,9 +34,8 @@ class LLMFactory:
     
     def _init_openai(self):
         try:
-            import openai
-            openai.api_key = self.config.api_key
-            return openai
+            from openai import OpenAI
+            return OpenAI(api_key=self.config.api_key)
         except Exception as e:
             print(f"[LLMFactory] OpenAI init error: {e}")
             return None
@@ -56,6 +55,8 @@ class LLMFactory:
     def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """Universal generate method"""
         client = self.get_client()
+        if client is None:
+            return f"[Error: LLM client for {self.config.provider.value} failed to initialize. Check your API keys and dependencies.]"
         
         if self.config.provider.value == "gemini":
             return self._generate_gemini(client, prompt, system_prompt)
@@ -86,7 +87,7 @@ class LLMFactory:
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": prompt})
             
-            response = client.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model=self.config.model,
                 messages=messages,
                 temperature=self.config.temperature,

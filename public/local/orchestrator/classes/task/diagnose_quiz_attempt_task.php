@@ -86,44 +86,125 @@ class diagnose_quiz_attempt_task extends \core\task\adhoc_task {
             $questiontextpath = $tempdir . '/question_text_' . $slot . '.txt';
             file_put_contents($questiontextpath, strip_tags($question->questiontext));
 
-            // Run the Python script
-            $script_path = dirname($CFG->dirroot) . '/admin/cli/diagnose.py';
+            // Run the Agentic AFS v2 Pipeline via main.py
+            $script_path = dirname($CFG->dirroot) . '/main.py';
             if (!file_exists($script_path)) {
-                $script_path = $CFG->dirroot . '/admin/cli/diagnose.py';
+                $script_path = $CFG->dirroot . '/main.py';
             }
 
-            $command = "python " . escapeshellarg($script_path);
-            if ($textfilepath) {
-                $command .= " --textfile " . escapeshellarg($textfilepath);
-            }
+            // Construct evidence block
+            $evidence = [
+                'content' => $clean_text,
+                'trigger' => 'diagnose',
+                'metadata' => [
+                    'role' => 'student',
+                    'language' => $student_lang,
+                    'question_text' => strip_tags($question->questiontext),
+                    'max_mark' => $maxmark
+                ]
+            ];
+            
             if ($mediafilepath) {
-                $command .= " --file " . escapeshellarg($mediafilepath);
+                $evidence['media_path'] = $mediafilepath;
             }
-            $command .= " --questiontextfile " . escapeshellarg($questiontextpath);
-            $command .= " --maxmark " . escapeshellarg($maxmark);
-            $command .= " --language " . escapeshellarg($student_lang);
-            $command .= " 2>&1";
 
-            $output_json = shell_exec($command);
+            $payload = [
+                'action' => 'run',
+                'input_mode' => 'moodle_evidence',
+                'evidence' => $evidence,
+                'user_id' => (string) $attempt->userid,
+                'course_id' => (string) $attempt->quiz
+            ];
+            
+            $json_payload = json_encode($payload);
+            
+            // Execute python via stdin
+            $command = "python " . escapeshellarg($script_path) . " --stdin 2>&1";
+            $descriptorspec = [
+                0 => ["pipe", "r"],  // stdin
+                1 => ["pipe", "w"],  // stdout
+                2 => ["pipe", "w"]   // stderr
+            ];
+            $process = proc_open($command, $descriptorspec, $pipes);
+            $output_json = '';
+            if (is_resource($process)) {
+                fwrite($pipes[0], $json_payload);
+                fclose($pipes[0]);
+                $output_json = stream_get_contents($pipes[1]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                proc_close($process);
+            }
+
             if ($output_json) {
-                $result = json_decode($output_json, true);
+                // Ignore any text preceding the JSON output
+                $clean_json = $output_json;
+                if (($start = strpos($clean_json, '{')) !== false && ($end = strrpos($clean_json, '}')) !== false) {
+                    $clean_json = substr($clean_json, $start, $end - $start + 1);
+                }
+                $result = json_decode($clean_json, true);
                 if ($result && isset($result['status']) && $result['status'] === 'success') {
-                    $diagnosis = htmlspecialchars($result['diagnosis']);
-                    $diagnosis = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $diagnosis);
-                    $diagnosis = nl2br($diagnosis);
+                    // Collect fully constructed diagnosis from AFS V2 parts
+                    $diagnosis_parts = [];
+                    if (isset($result['scoring']) && isset($result['scoring']['summary'])) {
+                        $diagnosis_parts[] = $result['scoring']['summary'];
+                    }
+                    if (isset($result['learning_tips'])) {
+                        $diagnosis_parts[] = "Tips (Sesuai Gaya Belajarmu):\n" . $result['learning_tips'];
+                    }
+                    if (isset($result['motivational_message'])) {
+                        $diagnosis_parts[] = "Pesan Tutor:\n" . $result['motivational_message'];
+                    }
+                    if (empty($diagnosis_parts)) {
+                        // fallback
+                        $diagnosis_parts[] = "Tutor review complete.";
+                    }
                     
-                    $mark = $result['mark'] ?? null;
+                    $full_diagnosis = implode("\n\n", $diagnosis_parts);
+                    $full_diagnosis = htmlspecialchars($full_diagnosis);
+                    $full_diagnosis = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $full_diagnosis);
+                    $full_diagnosis = nl2br($full_diagnosis);
+                    
+                    // Mark calculation
+                    $mark = null;
+                    if (isset($result['scoring']) && isset($result['scoring']['score'])) {
+                        // score_0_100 is returned, map to max_mark
+                        $score_0_100 = (float) $result['scoring']['score'];
+                        $mark = ($score_0_100 / 100.0) * $maxmark;
+                    }
+
                     if (!is_numeric($mark)) {
                         $mark = null;
                     } else {
-                        $mark = (float)$mark;
                         if ($mark > $maxmark) $mark = $maxmark;
                         if ($mark < 0) $mark = 0;
                     }
 
                     // Apply manual grade
-                    $quba->manual_grade($slot, $diagnosis, $mark, FORMAT_HTML);
+                    $quba->manual_grade($slot, $full_diagnosis, $mark, FORMAT_HTML);
                     $modified = true;
+                    
+                    // DB Logging for Orchestrator
+                    $record = new \stdClass();
+                    $record->run_id = 'DIAG-' . date('Ymd-His') . '-' . rand(1000, 9999);
+                    $record->userid = $attempt->userid;
+                    $record->courseid = $attempt->quiz; 
+                    $record->module = 'quiz';
+                    $record->instanceid = $attempt->quiz;
+                    $record->mode = 'diagnose_quiz';
+                    $record->input_evidence = $json_payload;
+                    $record->timecreated = time();
+                    
+                    if (isset($result['intent'])) $record->request_summary = 'Intent: ' . $result['intent'];
+                    if (isset($result['cff_applied'])) $record->policy = 'CFF: ' . ($result['cff_applied'] ? 'Applied' : 'None');
+                    if (isset($result['nodes_executed'])) $record->agents_called = json_encode($result['nodes_executed']);
+                    $record->final_payload = $clean_json;
+                    
+                    try {
+                        $DB->insert_record('local_orchestrator_log', $record);
+                    } catch (\Exception $e) {
+                        // Failsafe
+                    }
                 }
             }
         }

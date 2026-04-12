@@ -20,6 +20,12 @@ import sys
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+import datetime
+
+# Add project root to sys.path so we can import agents/, config/, logic_scratch/
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 
 def load_env():
@@ -150,6 +156,7 @@ def run_chat(prompt: str, context: dict, history: list, api_key: str) -> dict:
         model="gpt-4o",
         openai_api_key=api_key,
         temperature=0.7,
+        model_kwargs={"response_format": {"type": "json_object"}},
     )
 
     system_prompt = build_system_prompt(context)
@@ -174,11 +181,36 @@ def run_chat(prompt: str, context: dict, history: list, api_key: str) -> dict:
 
         # Try to parse as JSON (the AI is instructed to return JSON)
         parsed = try_parse_json(raw)
+
+        # Debugging the raw response when parsing fails or doesn't match expected schema
+
         if parsed and "message" in parsed:
-            return {
+            result = {
                 "message": parsed["message"],
                 "tool_action": parsed.get("tool_action"),
             }
+
+            # If the AI wants to create a quiz, generate practice content
+            # via the LessonGeneratorAgent pipeline
+            tool = parsed.get("tool_action")
+            if isinstance(tool, dict) and tool.get("action") == "create_quiz":
+                generated = generate_practice_content(
+                    theme=tool.get("theme") or "",
+                    section_name="",
+                    course_name="",
+                    language=tool.get("language", "English"),
+                    api_key=api_key,
+                )
+                if generated:
+                    result["generated_content"] = generated
+
+                log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_chat.log")
+                with open(log_path, "a", encoding="utf-8") as f:
+                    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    f.write(f"[{now}] --- DEBUG ---\nRAW: {raw}\nPARSED: {json.dumps(parsed, indent=1) if parsed else 'None'}\nGENERATED: {json.dumps(generated, indent=1) if generated else 'None'}\n--------------\n\n")
+
+
+            return result
 
         # Fallback: if the AI returned plain text instead of JSON
         return {"message": raw, "tool_action": None}
@@ -220,6 +252,77 @@ def try_parse_json(text: str) -> dict | None:
     return None
 
 
+def generate_practice_content(
+    theme: str, section_name: str, course_name: str, language: str, api_key: str
+) -> dict | None:
+    """
+    Use the LessonGeneratorAgent to generate a practice problem for quiz creation.
+
+    Instantiates the agent with an OpenAI-backed LLMFactory, builds a minimal
+    agentic state, and calls ``_gen_practice_problem()`` to produce structured
+    content (explanation, skeleton code, concepts) that PHP can insert directly
+    into the Moodle question bank.
+
+    Returns a dict with 'questions', 'skeleton_code', and 'concepts' keys,
+    or None if generation fails.
+    """
+    try:
+        # Ensure the LLMConfig can find the API key via env
+        os.environ["OPENAI_API_KEY"] = api_key
+
+        from config.llm_config import LLMConfig
+        from logic_scratch.schemas import LLMProvider
+        from agents.lesson_generator import LessonGeneratorAgent
+
+        config = LLMConfig(
+            provider=LLMProvider.OPENAI,
+            model="gpt-4o-mini",
+            api_key=api_key,
+        )
+        agent = LessonGeneratorAgent(config)
+
+        topic = theme or section_name or "general programming"
+
+        # Build a minimal agentic state for practice problem generation
+        state = {
+            "intent": "practice",
+            "evidence": {
+                "content": f"Practice problem about {topic}",
+                "metadata": {
+                    "role": "student",
+                    "topic": topic,
+                    "language": language or "English",
+                },
+            },
+            "weak_concepts": [topic],
+        }
+
+        content = agent._gen_practice_problem(state)
+
+        question_name = f"AI Practice: {topic}"
+
+        return {
+            "questions": [{"name": question_name, "text": content.explanation}],
+            "skeleton_code": content.skeleton_code or "",
+            "concepts": content.concepts or [],
+        }
+
+    except Exception as e:
+        # Log the error but never crash the chat flow
+        try:
+            log_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "debug_chat.log"
+            )
+            with open(log_path, "a", encoding="utf-8") as f:
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(
+                    f"[{now}] --- LESSON GENERATOR ERROR ---\n{e}\n--------------\n\n"
+                )
+        except Exception:
+            pass
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Moodle AI Chatbot powered by LangChain")
     parser.add_argument("--prompt", required=True, help="The user's message")
@@ -249,15 +352,14 @@ def main():
 
     try:
         result = run_chat(args.prompt, context, history, openai_api)
-        print(
-            json.dumps(
-                {
-                    "status": "success",
-                    "message": result["message"],
-                    "tool_action": result.get("tool_action"),
-                }
-            )
-        )
+        output = {
+            "status": "success",
+            "message": result["message"],
+            "tool_action": result.get("tool_action"),
+        }
+        if result.get("generated_content"):
+            output["generated_content"] = result["generated_content"]
+        print(json.dumps(output))
     except Exception as e:
         print(json.dumps({"status": "error", "message": str(e)}))
         sys.exit(1)

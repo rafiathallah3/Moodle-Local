@@ -40,6 +40,27 @@ class MoodleAdapter:
             error=None
         )
     
+    def state_to_practice_response(self, state: AgenticState, topic: str = "general") -> dict:
+        """
+        Convert final state to a practice-specific response for the Practice Hub UI.
+        Extracts problem content and structures it for the multi-turn PHP session.
+        """
+        if state.get("error"):
+            return {"status": "error", "message": state["error"]}
+
+        content = state.get("content_package")
+        if not content:
+            return {"status": "error", "message": "No practice content generated"}
+
+        return {
+            "status": "success",
+            "topic": topic,
+            "problem": content.explanation,
+            "skeleton_code": content.skeleton_code or "",
+            "concepts": content.concepts,
+            "metadata": content.metadata
+        }
+
     def state_to_response(self, state: AgenticState) -> dict:
         """Convert final state ke response Moodle"""
         if state.get("error"):

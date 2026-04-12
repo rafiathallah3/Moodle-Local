@@ -88,11 +88,13 @@ def create_app(llm_config=None):
         if state.get("policy_blocked"):
             return "blocked"
         intent = state.get("intent")
-        if intent.value == "submission":
+        # Use Intent enum value strings (from schemas.py)
+        intent_val = intent.value if hasattr(intent, "value") else str(intent)
+        if intent_val == "submission":
             return "submission"
-        elif intent.value == "practice_request":
-            return "practice_with_quiz"  # NEW: Practice dengan quiz
-        elif intent.value == "analytics_request":
+        elif intent_val == "practice":  # Fixed: Intent.PRACTICE = "practice"
+            return "practice_with_quiz"  # Practice + 2-Stage Quiz pipeline
+        elif intent_val == "analytics_request":
             return "analytics"
         return "content"
     
@@ -102,8 +104,8 @@ def create_app(llm_config=None):
         {
             "blocked": "formatter",
             "submission": "analyzer",
-            "practice_with_quiz": "lesson_generator",  # Practice dengan quiz
-            "analytics": "student_dashboard",  # NEW: Route ke dashboard
+            "practice_with_quiz": "lesson_generator",  # Practice + Quiz pipeline
+            "analytics": "student_dashboard",  # Route ke dashboard
             "content": "lesson_generator"
         }
     )
@@ -254,6 +256,131 @@ def process_request(evidence: dict, user_id: str, course_id: str) -> dict:
     return adapter.state_to_response(result)
 
 
+def process_practice_request(stage: str, user_id: str, course_id: str,
+                              topic: str = "general",
+                              student_answer: str = "",
+                              question: str = "",
+                              problem_explanation: str = "") -> dict:
+    """
+    Stateless Practice Pipeline Entry Point — called once per stage.
+
+    PHP manages session state between turns. This function handles each
+    individual stage:
+
+    Stage "generate":
+        Generates a practice problem + Stage 1 conceptual question.
+        Returns: {problem, skeleton_code, concepts, stage1_question}
+
+    Stage "verify_stage1":
+        Evaluates student's conceptual answer and generates Stage 2 question.
+        Returns: {passed, score, feedback, stage2_question}
+
+    Stage "verify_stage2":
+        Evaluates student's application answer and returns final recommendation.
+        Returns: {passed, score, feedback, final_status, recommendation}
+    """
+    from logic_scratch.schemas import ContentPackage
+    from tools.quiz_verifier import QuizVerifier
+
+    verifier = QuizVerifier()
+
+    if stage == "generate":
+        # Drive the main graph with practice intent
+        evidence = {
+            "content": f"I want to practice {topic}",
+            "trigger": "practice_request",
+            "metadata": {"role": "student", "topic": topic}
+        }
+        adapter = MoodleAdapter()
+        state = adapter.evidence_to_state(evidence, user_id, course_id)
+        result = graph.invoke(state)
+
+        # Extract generated content_package
+        content = result.get("content_package")
+        if not content:
+            # Fallback minimal problem
+            content = ContentPackage(
+                explanation=f"Practice problem for {topic}: write a program that demonstrates {topic}.",
+                skeleton_code=f"def practice_{topic.replace(' ', '_')}():\n    # Your code here\n    pass",
+                concepts=[topic, "logic", "algorithm"],
+                metadata={"mode": "practice_problem", "target_kc": topic}
+            )
+
+        # Generate Stage 1 conceptual question
+        q1 = verifier.generate_stage1_question(content, topic)
+
+        return {
+            "status": "success",
+            "stage": "generated",
+            "problem": content.explanation,
+            "skeleton_code": content.skeleton_code or "",
+            "concepts": content.concepts,
+            "stage1_question": q1
+        }
+
+    elif stage == "verify_stage1":
+        # Reconstruct minimal ContentPackage from PHP-provided context
+        content = ContentPackage(
+            explanation=problem_explanation,
+            concepts=[topic, "logic", "algorithm"],
+            metadata={"mode": "practice_problem", "target_kc": topic}
+        )
+        result = verifier.evaluate_stage1(
+            question=question,
+            student_answer=student_answer,
+            expected_concepts=content.concepts
+        )
+
+        response = {
+            "status": "success",
+            "stage": "stage1_evaluated",
+            "passed": result.is_verified,
+            "score": round(result.score, 1),
+            "feedback": result.feedback,
+            "missing_concepts": result.missing_concepts,
+            "next_action": result.next_action
+        }
+
+        # If stage 1 passed, pre-generate stage 2 question
+        if result.is_verified:
+            q2 = verifier.generate_stage2_question(
+                content, previous_answer=student_answer, topic=topic
+            )
+            response["stage2_question"] = q2
+
+        return response
+
+    elif stage == "verify_stage2":
+        result = verifier.evaluate_stage2(
+            question=question,
+            student_answer=student_answer,
+            original_problem=problem_explanation
+        )
+
+        final_map = {
+            "next_topic": "Selamat! Kamu sudah menguasai topik ini. Lanjut ke topik berikutnya!",
+            "practice_more": "Kamu perlu lebih banyak latihan untuk topik ini. Coba lagi!",
+            "revisit_concept": "Ada konsep yang perlu diulang. Pelajari kembali materinya."
+        }
+        recommendation = final_map.get(
+            result.next_action,
+            "Lanjutkan belajar dan jangan menyerah!"
+        )
+
+        return {
+            "status": "success",
+            "stage": "stage2_evaluated",
+            "passed": result.is_verified,
+            "score": round(result.score, 1),
+            "feedback": result.feedback,
+            "final_status": result.next_action,
+            "recommendation": recommendation
+        }
+
+    else:
+        return {"status": "error", "message": f"Unknown practice stage: {stage}"}
+
+
 def process_practice_with_quiz(user_id: str, course_id: str, topic: str, 
                                 student_code: str, quiz_answers: dict) -> dict:
     """
@@ -358,7 +485,19 @@ if __name__ == "__main__":
         course_id = data.get("evidence", {}).get("course_id", "CS101")
         
         try:
-            if input_mode == "moodle_evidence":
+            if action == "practice":
+                # Practice Pipeline: stateless-per-stage dispatch
+                practice_data = data.get("practice", {})
+                result = process_practice_request(
+                    stage=practice_data.get("stage", "generate"),
+                    user_id=data.get("user_id", user_id),
+                    course_id=data.get("course_id", course_id),
+                    topic=practice_data.get("topic", "general"),
+                    student_answer=practice_data.get("student_answer", ""),
+                    question=practice_data.get("question", ""),
+                    problem_explanation=practice_data.get("problem_explanation", "")
+                )
+            elif input_mode == "moodle_evidence":
                 evidence = data.get("evidence", {})
                 result = process_request(evidence, user_id, course_id)
             else:

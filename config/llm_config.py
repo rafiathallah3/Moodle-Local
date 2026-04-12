@@ -10,7 +10,7 @@ class LLMConfig:
     """Konfigurasi LLM yang bisa diganti-ganti providernya"""
     
     def __init__(self, 
-                 provider: LLMProvider = LLMProvider.GEMINI,
+                 provider: LLMProvider = LLMProvider.OPENAI,
                  model: Optional[str] = None,
                  api_key: Optional[str] = None,
                  temperature: float = 0.7,
@@ -37,7 +37,7 @@ class LLMConfig:
     def _get_default_model(self) -> str:
         mapping = {
             LLMProvider.GEMINI: "gemini-1.5-flash",
-            LLMProvider.OPENAI: "gpt-4",
+            LLMProvider.OPENAI: "gpt-4o-mini",
             LLMProvider.ANTHROPIC: "claude-3-sonnet-20240229",
             LLMProvider.LOCAL: "llama3"
         }

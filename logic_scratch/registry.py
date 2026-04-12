@@ -51,8 +51,17 @@ class CourseRegistry:
             difficulty_map=config.difficulty_baseline
         )
     
-    def get_course_config(self, course_id: str) -> Optional[CourseConfig]:
-        return self.courses.get(course_id)
+    def get_course_config(self, course_id: str) -> CourseConfig:
+        config = self.courses.get(course_id)
+        if not config:
+            config = CourseConfig(
+                course_id=course_id,
+                course_name=f"Course {course_id}",
+                kc_set=["general"],
+                cff_enabled=False
+            )
+            self.register_course(config)
+        return config
     
     def get_kc_graph(self, course_id: str) -> KCGraph:
         return self.kc_graphs.get(course_id, KCGraph(course_id=course_id, kcs=[]))

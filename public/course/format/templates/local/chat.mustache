@@ -380,7 +380,13 @@ require(['jquery', 'core/config'], function($, Config) {
     var chips = $('#chat-chips-{{uniqid}}');
 
     // Course ID from Moodle page config
-    var courseId = (Config.courseId || 0);
+    var courseId = (Config.courseId || (typeof M !== 'undefined' && M.cfg && M.cfg.courseId) || 0);
+    if (!courseId && document.body && document.body.className) {
+        var match = document.body.className.match(/course-(\d+)/);
+        if (match) {
+            courseId = parseInt(match[1], 10);
+        }
+    }
 
     btn.on('click', function() {
         $('.chat-view-custom').removeClass('show');
